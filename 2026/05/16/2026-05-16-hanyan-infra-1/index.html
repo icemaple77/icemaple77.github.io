@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"www.chenyun.org","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":true,"style":"flat"},"fold":{"enable":false,"height":500},"language":false,"border_radius":8},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false,"trigger":"auto"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="IntroductionHanyanOS is not an operating system in the traditional kernel sense — it is an Agent Operating System: a purpose-built runtime that orchestrates AI agents, self-hosted services, network tu">
+<meta property="og:type" content="article">
+<meta property="og:title" content="HanyanOS 部署手记">
+<meta property="og:url" content="https://www.chenyun.org/2026/05/16/2026-05-16-hanyan-infra-1/index.html">
+<meta property="og:site_name" content="望舒">
+<meta property="og:description" content="IntroductionHanyanOS is not an operating system in the traditional kernel sense — it is an Agent Operating System: a purpose-built runtime that orchestrates AI agents, self-hosted services, network tu">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-05-15T23:15:00.000Z">
+<meta property="article:modified_time" content="2026-05-15T23:16:18.201Z">
+<meta property="article:author" content="Michael Chen">
+<meta property="article:tag" content="DevOps">
+<meta property="article:tag" content="HanyanOS">
+<meta property="article:tag" content="Infrastructure">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://www.chenyun.org/2026/05/16/2026-05-16-hanyan-infra-1/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://www.chenyun.org/2026/05/16/2026-05-16-hanyan-infra-1/","path":"2026/05/16/2026-05-16-hanyan-infra-1/","title":"HanyanOS 部署手记"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>HanyanOS 部署手记 | 望舒</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">望舒</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">人的一生注定会遇到两个人一个惊艳了时光，一个温柔了岁月</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Introduction"><span class="nav-number">1.</span> <span class="nav-text">Introduction</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Hardware-Topology"><span class="nav-number">2.</span> <span class="nav-text">Hardware &amp; Topology</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Node-Specifications"><span class="nav-number">2.1.</span> <span class="nav-text">Node Specifications</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#The-Three-Layer-Architecture"><span class="nav-number">3.</span> <span class="nav-text">The Three-Layer Architecture</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#L1-%E2%80%94-Infrastructure-Layer"><span class="nav-number">3.1.</span> <span class="nav-text">L1 — Infrastructure Layer</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#L2-%E2%80%94-Services-Layer"><span class="nav-number">3.2.</span> <span class="nav-text">L2 — Services Layer</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#L3-%E2%80%94-Governance-Layer"><span class="nav-number">3.3.</span> <span class="nav-text">L3 — Governance Layer</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#The-SNI-Routing-Design"><span class="nav-number">4.</span> <span class="nav-text">The SNI Routing Design</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#FRP-Replacing-SSH-Tunnels"><span class="nav-number">5.</span> <span class="nav-text">FRP: Replacing SSH Tunnels</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#The-Agent-OS-OpenClaw-Multi-Agent-Coordination"><span class="nav-number">6.</span> <span class="nav-text">The Agent OS: OpenClaw &amp; Multi-Agent Coordination</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Memory-System-6-Layer-Hierarchy"><span class="nav-number">7.</span> <span class="nav-text">Memory System: 6-Layer Hierarchy</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Security-Architecture"><span class="nav-number">8.</span> <span class="nav-text">Security Architecture</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Problem-Solving-Case-Study-The-Open-Port-Incident"><span class="nav-number">9.</span> <span class="nav-text">Problem-Solving Case Study: The Open Port Incident</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Operational-Automation"><span class="nav-number">10.</span> <span class="nav-text">Operational Automation</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Lessons-Learned"><span class="nav-number">11.</span> <span class="nav-text">Lessons Learned</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#What%E2%80%99s-Next"><span class="nav-number">12.</span> <span class="nav-text">What’s Next</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Michael Chen"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">Michael Chen</p>
+  <div class="site-description" itemprop="description">Michael Chen 的技术博客，关注 AI、云计算、软件工程和科技趋势</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">9</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">45</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/michaelchen" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;michaelchen" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://linkedin.com/in/icemaple77" title="LinkedIn → https:&#x2F;&#x2F;linkedin.com&#x2F;in&#x2F;icemaple77" rel="noopener me" target="_blank"><i class="fab fa-linkedin fa-fw"></i>LinkedIn</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://ai.chenyun.org/" title="AI → https:&#x2F;&#x2F;ai.chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-robot fa-fw"></i>AI</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.chenyun.org/" title="Blog → https:&#x2F;&#x2F;blog.chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-blog fa-fw"></i>Blog</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:michael@chenyun.org" title="Email → mailto:michael@chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-envelope fa-fw"></i>Email</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.chenyun.org/2026/05/16/2026-05-16-hanyan-infra-1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="Michael Chen">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="望舒">
+      <meta itemprop="description" content="Michael Chen 的技术博客，关注 AI、云计算、软件工程和科技趋势">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="HanyanOS 部署手记 | 望舒">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          HanyanOS 部署手记
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-05-16 09:15:00" itemprop="dateCreated datePublished" datetime="2026-05-16T09:15:00+10:00">2026-05-16</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/tech/" itemprop="url" rel="index"><span itemprop="name">tech</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="Introduction"><a href="#Introduction" class="headerlink" title="Introduction"></a>Introduction</h2><p>HanyanOS is not an operating system in the traditional kernel sense — it is an <strong>Agent Operating System</strong>: a purpose-built runtime that orchestrates AI agents, self-hosted services, network tunneling, and automated governance on commodity hardware. The entire stack runs on a single Intel N100 mini-PC in Brisbane, Australia, fronted by an AWS Lightsail instance in Singapore for edge ingress.</p>
+<p>This post is the first in a series documenting the full deployment architecture, design decisions, and operational lessons learned.</p>
+<h2 id="Hardware-Topology"><a href="#Hardware-Topology" class="headerlink" title="Hardware &amp; Topology"></a>Hardware &amp; Topology</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">    Internet</span><br><span class="line">        │</span><br><span class="line">┌───────┴────────┐</span><br><span class="line">│  SG Lightsail   │</span><br><span class="line">│  t3.nano        │</span><br><span class="line">│  52.220.247.252 │</span><br><span class="line">│  (Edge Ingress) │</span><br><span class="line">└───────┬────────┘</span><br><span class="line">        │ FRP / Xray</span><br><span class="line">        │</span><br><span class="line">┌───────┴────────┐</span><br><span class="line">│  Brisbane N100  │</span><br><span class="line">│  Intel N100     │</span><br><span class="line">│  4C/4T, 11GB    │</span><br><span class="line">│  Ubuntu 24.04   │</span><br><span class="line">│  (Service Hub)  │</span><br><span class="line">└────────────────┘</span><br></pre></td></tr></table></figure>
+
+<h3 id="Node-Specifications"><a href="#Node-Specifications" class="headerlink" title="Node Specifications"></a>Node Specifications</h3><table>
+<thead>
+<tr>
+<th>Node</th>
+<th>Role</th>
+<th>Spec</th>
+<th>Location</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>SG Lightsail</strong></td>
+<td>Edge Ingress</td>
+<td>t3.nano (0.5GB, 20GB)</td>
+<td>AWS ap-southeast-1</td>
+</tr>
+<tr>
+<td><strong>Brisbane N100</strong></td>
+<td>Service Hub</td>
+<td>Intel N100 (11GB, 1TB SSD)</td>
+<td>Home, Australia</td>
+</tr>
+</tbody></table>
+<p>The architectural philosophy is deliberate: the VPS is kept intentionally thin — it runs only Nginx (stream SNI), Xray (VPN), and FRP server. All business logic, databases, AI models, and application services reside on the N100. This minimizes attack surface and operational complexity at the edge.</p>
+<h2 id="The-Three-Layer-Architecture"><a href="#The-Three-Layer-Architecture" class="headerlink" title="The Three-Layer Architecture"></a>The Three-Layer Architecture</h2><p>HanyanOS follows a strict three-layer isolation model:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">┌──────────────────────────────────────────────────┐</span><br><span class="line">│                  L3: Governance                   │</span><br><span class="line">│  OpenClaw · Memory System · Rules Engine         │</span><br><span class="line">│  Cron Scheduler · n8n Automation                 │</span><br><span class="line">├──────────────────────────────────────────────────┤</span><br><span class="line">│                  L2: Services                     │</span><br><span class="line">│  WordPress · MySQL · Stalwart Mail · Ollama AI   │</span><br><span class="line">│  SnappyMail · AI API Gateway                     │</span><br><span class="line">├──────────────────────────────────────────────────┤</span><br><span class="line">│                  L1: Infrastructure               │</span><br><span class="line">│  Docker · FRP Tunnel · Nginx · Xray · UFW        │</span><br><span class="line">│  acme.sh · Fail2ban · SSH                        │</span><br><span class="line">└──────────────────────────────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<h3 id="L1-—-Infrastructure-Layer"><a href="#L1-—-Infrastructure-Layer" class="headerlink" title="L1 — Infrastructure Layer"></a>L1 — Infrastructure Layer</h3><p>The foundation is built on Docker containers for service isolation, FRP for secure tunneling from the VPS to the N100 (which has no static public IP), and a multi-layered Nginx reverse proxy with SNI-based routing.</p>
+<p><strong>Key infrastructure components:</strong></p>
+<ul>
+<li><strong>12 Docker containers</strong> running on the N100</li>
+<li><strong>FRP v0.61.0</strong> tunnels replacing legacy SSH reverse tunnels</li>
+<li><strong>Xray REALITY</strong> with VLESS+Vision+XTLS for VPN access</li>
+<li><strong>UFW + Fail2ban</strong> for host-level security</li>
+</ul>
+<h3 id="L2-—-Services-Layer"><a href="#L2-—-Services-Layer" class="headerlink" title="L2 — Services Layer"></a>L2 — Services Layer</h3><p>All production services are containerized and bound to loopback interfaces on the N100, accessible only via the FRP tunnel or local network:</p>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Stack</th>
+<th>Port</th>
+<th>Container</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Blog</strong></td>
+<td>WordPress + Apache + PHP</td>
+<td>8081</td>
+<td>serena-wp</td>
+</tr>
+<tr>
+<td><strong>Database</strong></td>
+<td>MySQL 8.0</td>
+<td>3307</td>
+<td>hanyan-db</td>
+</tr>
+<tr>
+<td><strong>Mail</strong></td>
+<td>Stalwart Mail Server</td>
+<td>25&#x2F;465&#x2F;587&#x2F;993</td>
+<td>stalwart-mail</td>
+</tr>
+<tr>
+<td><strong>Webmail</strong></td>
+<td>SnappyMail</td>
+<td>8091</td>
+<td>snappymail</td>
+</tr>
+<tr>
+<td><strong>AI</strong></td>
+<td>OpenClaw Gateway + Ollama</td>
+<td>18789&#x2F;11434</td>
+<td>systemd</td>
+</tr>
+</tbody></table>
+<h3 id="L3-—-Governance-Layer"><a href="#L3-—-Governance-Layer" class="headerlink" title="L3 — Governance Layer"></a>L3 — Governance Layer</h3><p>This is what distinguishes HanyanOS from a typical homelab setup. The governance layer provides:</p>
+<ol>
+<li><strong>Multi-Agent Orchestration</strong> via OpenClaw — 7 specialized agents (main, coder, devops, tester, uxui, accountant, security)</li>
+<li><strong>Hierarchical Memory System</strong> — 6-layer memory with core identity data, user preferences, infrastructure state, project knowledge, session archives, and ephemeral cache</li>
+<li><strong>Cron-based Automation</strong> — 15+ scheduled tasks including nightly patrol, dream processing, backup rotation, and SSL renewal</li>
+<li><strong>n8n Workflows</strong> — 3 active automation pipelines for hot topic detection and webhook processing</li>
+</ol>
+<h2 id="The-SNI-Routing-Design"><a href="#The-SNI-Routing-Design" class="headerlink" title="The SNI Routing Design"></a>The SNI Routing Design</h2><p>One of the most critical pieces is the Nginx <code>stream</code> directive with <code>ssl_preread</code> on the Lightsail VPS. All seven domains share port 443, with SNI-based routing:</p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /etc/nginx/nginx.conf — stream block</span></span><br><span class="line"><span class="section">stream</span> &#123;</span><br><span class="line">    <span class="attribute">map</span> <span class="variable">$ssl_preread_server_name</span> <span class="variable">$backend</span> &#123;</span><br><span class="line">        blog.chenyun.<span class="attribute">org</span>     web_backend;</span><br><span class="line">        www.chenyun.<span class="attribute">org</span>      web_backend;</span><br><span class="line">        chenyun.<span class="attribute">org</span>          web_backend;</span><br><span class="line">        ai.chenyun.<span class="attribute">org</span>       web_backend;</span><br><span class="line">        api.chenyun.<span class="attribute">org</span>      web_backend;</span><br><span class="line">        mail.chenyun.<span class="attribute">org</span>     web_backend;</span><br><span class="line">        vpn.chenyun.<span class="attribute">org</span>      xray_backend;</span><br><span class="line">        <span class="attribute">default</span>              xray_backend;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="section">upstream</span> web_backend &#123;</span><br><span class="line">        <span class="attribute">server</span> <span class="number">127.0.0.1:8443</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="section">upstream</span> xray_backend &#123;</span><br><span class="line">        <span class="attribute">server</span> <span class="number">127.0.0.1:8444</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="section">server</span> &#123;</span><br><span class="line">        <span class="attribute">listen</span> <span class="number">443</span>;</span><br><span class="line">        <span class="attribute">ssl_preread</span> <span class="literal">on</span>;</span><br><span class="line">        <span class="attribute">proxy_pass</span> <span class="variable">$backend</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>The secondary Nginx on port 8443 terminates SSL and handles reverse proxying:</p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /etc/nginx/sites-enabled/blog-ssl</span></span><br><span class="line"><span class="section">server</span> &#123;</span><br><span class="line">    <span class="attribute">listen</span> <span class="number">127.0.0.1:8443</span> ssl http2;</span><br><span class="line">    <span class="attribute">server_name</span> blog.chenyun.org;</span><br><span class="line"></span><br><span class="line">    <span class="attribute">ssl_certificate</span>     /etc/ssl/chenyun/fullchain.cer;</span><br><span class="line">    <span class="attribute">ssl_certificate_key</span> /etc/ssl/chenyun/chenyun.org.key;</span><br><span class="line"></span><br><span class="line">    <span class="section">location</span> / &#123;</span><br><span class="line">        <span class="attribute">proxy_pass</span> http://127.0.0.1:7444;  <span class="comment"># FRP local port</span></span><br><span class="line">        <span class="attribute">proxy_set_header</span> Host <span class="variable">$host</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Real-IP <span class="variable">$remote_addr</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Forwarded-For <span class="variable">$proxy_add_x_forwarded_for</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Forwarded-Proto <span class="variable">$scheme</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>This design allows us to serve six different web applications behind a single public IP, with zero configuration changes when adding new services — just add a new <code>server_name</code> block and a FRP tunnel.</p>
+<h2 id="FRP-Replacing-SSH-Tunnels"><a href="#FRP-Replacing-SSH-Tunnels" class="headerlink" title="FRP: Replacing SSH Tunnels"></a>FRP: Replacing SSH Tunnels</h2><p>The original architecture used SSH reverse tunnels (<code>ssh -R</code>), which proved fragile. After migrating to FRP v0.61.0, the tunnel topology became:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">SG Lightsail (FRPS)                 N100 (FRPC)</span><br><span class="line">  :7443 ─── control ───→  (frpc connects outbound)</span><br><span class="line">  :7444 ─── blog ───────→  :8081 (WordPress)</span><br><span class="line">  :7445 ─── ai/api ─────→  :8090 (AI services)</span><br><span class="line">  :7446 ─── smtp ───────→  :25   (Stalwart)</span><br><span class="line">  :7447 ─── submission ─→  :465  (Stalwart)</span><br><span class="line">  :7448 ─── imaps ──────→  :993  (Stalwart)</span><br><span class="line">  :7449 ─── webmail ────→  :8091 (SnappyMail)</span><br></pre></td></tr></table></figure>
+
+<p>FRP configuration is minimal and reliable:</p>
+<figure class="highlight toml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /etc/frp/frps.toml (server)</span></span><br><span class="line"><span class="attr">bindPort</span> = <span class="number">7443</span></span><br><span class="line"><span class="attr">token</span> = <span class="string">&quot;chenyun-frp-2026&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># /etc/frp/frpc.toml (client)</span></span><br><span class="line"><span class="attr">serverAddr</span> = <span class="string">&quot;52.220.247.252&quot;</span></span><br><span class="line"><span class="attr">serverPort</span> = <span class="number">7443</span></span><br><span class="line"><span class="attr">token</span> = <span class="string">&quot;chenyun-frp-2026&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="section">[[proxies]]</span></span><br><span class="line"><span class="attr">name</span> = <span class="string">&quot;blog&quot;</span></span><br><span class="line"><span class="attr">type</span> = <span class="string">&quot;tcp&quot;</span></span><br><span class="line"><span class="attr">localIP</span> = <span class="string">&quot;127.0.0.1&quot;</span></span><br><span class="line"><span class="attr">localPort</span> = <span class="number">8081</span></span><br><span class="line"><span class="attr">remotePort</span> = <span class="number">7444</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>Key improvement over SSH tunnels:</strong> FRP provides automatic reconnection, health checks, and a clean port management model. The previous SSH tunnel required manual process supervision and left dangling ports on <code>0.0.0.0</code>.</p>
+<h2 id="The-Agent-OS-OpenClaw-Multi-Agent-Coordination"><a href="#The-Agent-OS-OpenClaw-Multi-Agent-Coordination" class="headerlink" title="The Agent OS: OpenClaw &amp; Multi-Agent Coordination"></a>The Agent OS: OpenClaw &amp; Multi-Agent Coordination</h2><p>HanyanOS runs on <strong>OpenClaw</strong>, an open-source AI agent runtime. The system orchestrates 7 specialized agents:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">            ┌─────────────┐</span><br><span class="line">            │  Serena 🧠  │  (Main — Orchestrator)</span><br><span class="line">            └──────┬──────┘</span><br><span class="line">     ┌─────────────┼─────────────┐</span><br><span class="line">     │             │             │</span><br><span class="line">┌────┴───┐   ┌────┴───┐   ┌────┴───┐</span><br><span class="line">│ Devops │   │ Coder  │   │ Tester │</span><br><span class="line">│ 苏清雅 │   │        │   │ 钟离燕 │</span><br><span class="line">└────────┘   └────────┘   └────────┘</span><br><span class="line">┌────────┐   ┌────────┐   ┌────────┐</span><br><span class="line">│ UX/UI  │   │Account.│   │Security│</span><br><span class="line">└────────┘   └────────┘   └────────┘</span><br></pre></td></tr></table></figure>
+
+<p>Each agent has:</p>
+<ul>
+<li>An isolated workspace directory</li>
+<li>A dedicated memory namespace</li>
+<li>A personality definition (soul) crafted by Serena</li>
+<li>The ability to communicate cross-agent via OpenClaw’s <code>agentToAgent</code> protocol</li>
+</ul>
+<p>The coordination follows a strict workflow: <strong>Serena delegates → agent executes → agent reports → Serena reviews → final summary.</strong></p>
+<h2 id="Memory-System-6-Layer-Hierarchy"><a href="#Memory-System-6-Layer-Hierarchy" class="headerlink" title="Memory System: 6-Layer Hierarchy"></a>Memory System: 6-Layer Hierarchy</h2><p>The memory architecture is file-based (Markdown as source of truth, JSON as index), with six distinct layers:</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Location</th>
+<th>Content</th>
+<th>Volatility</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Core</td>
+<td><code>memory/core/</code></td>
+<td>Identity, personality</td>
+<td>Extremely low</td>
+</tr>
+<tr>
+<td>User</td>
+<td><code>memory/user/</code></td>
+<td>User preferences, habits</td>
+<td>Low</td>
+</tr>
+<tr>
+<td>Infrastructure</td>
+<td><code>memory/infrastructure/</code></td>
+<td>Network topology, ports, SSL, DNS</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Projects</td>
+<td><code>memory/projects/</code></td>
+<td>Active project states</td>
+<td>Medium-High</td>
+</tr>
+<tr>
+<td>Summaries</td>
+<td><code>memory/summaries/</code></td>
+<td>Conversation compression</td>
+<td>Ephemeral</td>
+</tr>
+<tr>
+<td>Cache</td>
+<td><code>memory/cache/</code></td>
+<td>Temporary data</td>
+<td>Very high</td>
+</tr>
+</tbody></table>
+<p>This separation is critical: when the context window is compressed, non-essential layers are pruned first. Infrastructure state is always preserved because it’s referenced by virtually every task.</p>
+<h2 id="Security-Architecture"><a href="#Security-Architecture" class="headerlink" title="Security Architecture"></a>Security Architecture</h2><p>Security follows a <strong>defense-in-depth</strong> approach across three layers:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">Layer 1 — VPS Edge (SG Lightsail)</span><br><span class="line">  ├── UFW: default deny, 9 ports whitelisted</span><br><span class="line">  ├── Fail2ban: SSH + Nginx rate limiting</span><br><span class="line">  ├── No business logic on VPS</span><br><span class="line">  └── FRP ports restricted to N100 backends only</span><br><span class="line"></span><br><span class="line">Layer 2 — Tunnel (FRP)</span><br><span class="line">  ├── Token-authenticated control channel</span><br><span class="line">  ├── Service-specific port mapping</span><br><span class="line">  └── All tunnels originate from N100 outbound</span><br><span class="line"></span><br><span class="line">Layer 3 — N100 Service Hub</span><br><span class="line">  ├── Services bound to 127.0.0.1 where possible</span><br><span class="line">  ├── Docker network isolation</span><br><span class="line">  ├── Local UFW with service-specific rules</span><br><span class="line">  └── Ongoing: automated security patching</span><br></pre></td></tr></table></figure>
+
+<h2 id="Problem-Solving-Case-Study-The-Open-Port-Incident"><a href="#Problem-Solving-Case-Study-The-Open-Port-Incident" class="headerlink" title="Problem-Solving Case Study: The Open Port Incident"></a>Problem-Solving Case Study: The Open Port Incident</h2><p>During initial setup, the VPS had UFW inactive with 15+ exposed ports including SSH reverse tunnels bound to <code>0.0.0.0</code>. A security audit revealed:</p>
+<p><strong>Discovered risks:</strong></p>
+<ul>
+<li>Ports 2222, 8090, 10025, 10143, 10465, 10587, 10993 all public</li>
+<li>FRP management ports 7443-7451 fully exposed</li>
+<li>Netdata on 19999 broadcasting system metrics publicly</li>
+<li>No rate limiting on API endpoints</li>
+</ul>
+<p><strong>Resolution steps:</strong></p>
+<ol>
+<li>Enabled UFW with <code>default deny incoming</code></li>
+<li>Whitelisted only 9 essential ports (22, 80, 443, 25, 465, 587, 993, 8443, 7443)</li>
+<li>Closed all legacy SSH tunnel ports</li>
+<li>Bound internal services to <code>127.0.0.1</code> on the N100</li>
+<li>Documented the entire security posture in infrastructure memory</li>
+</ol>
+<p>The lesson: <strong>a VPS with 0.5GB RAM should not be a general-purpose server.</strong> Its role is strictly edge routing.</p>
+<h2 id="Operational-Automation"><a href="#Operational-Automation" class="headerlink" title="Operational Automation"></a>Operational Automation</h2><p>The system runs 15+ cron jobs for self-maintenance:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">03:00 — Dream pipeline (AI reflection processing)</span><br><span class="line">03:30 — Memory optimization (compaction, indexing)</span><br><span class="line">04:00 — Daily backup rotation (7-day retention)</span><br><span class="line">07:00 — Wake cycle (daytime resource scaling)</span><br><span class="line">08:00 — Morning patrol (health checks, anomaly detection)</span><br><span class="line">20:56 — SSL certificate renewal check (acme.sh)</span><br><span class="line">23:00 — Sleep cycle (nighttime power saving)</span><br><span class="line">Every 2h — Emotion engine reflection</span><br><span class="line">Every 4h — Knowledge consolidation</span><br></pre></td></tr></table></figure>
+
+<h2 id="Lessons-Learned"><a href="#Lessons-Learned" class="headerlink" title="Lessons Learned"></a>Lessons Learned</h2><ol>
+<li><strong>FRP over SSH every time.</strong> SSH reverse tunnels lack reconnection logic and leak ports. FRP is production-grade and cost-free.</li>
+<li><strong>Document as you deploy.</strong> Every configuration change must be reflected in the infrastructure memory. Without this, the AI agents lose situational awareness.</li>
+<li><strong>Single public IP, many domains.</strong> Nginx <code>ssl_preread</code> + SNI routing on port 443 is the cleanest way to multiplex services behind one IP.</li>
+<li><strong>Edge should be anorexic.</strong> The less software runs on the VPS, the smaller the blast radius.</li>
+<li><strong>File-based memory over databases.</strong> For an AI system, Markdown files are more resilient, human-readable, and LLM-friendly than SQL tables.</li>
+</ol>
+<h2 id="What’s-Next"><a href="#What’s-Next" class="headerlink" title="What’s Next"></a>What’s Next</h2><p>This series will continue with deep dives into each component:</p>
+<ul>
+<li><strong>#2</strong>: Nginx Reverse Proxy — SNI Routing for 7 Domains</li>
+<li><strong>#3</strong>: FRP Tunnels — Secure Penetration from VPS to N100</li>
+<li><strong>#4</strong>: Stalwart Mail Server — Self-Hosted Email</li>
+<li><strong>#5</strong>: WordPress + MySQL — Dockerized Blog Deployment</li>
+</ul>
+<p>The full source of truth for the deployment lives in <code>HanyanOS/memory/infrastructure/</code>, and the Agent OS runtime is open source at <a target="_blank" rel="noopener" href="https://github.com/openclaw">github.com&#x2F;openclaw</a>.</p>
+<hr>
+<p><em>This is the first entry in the HanyanOS Deployment Journal series, documenting a production-grade Agent OS running on commodity hardware.</em></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Michael Chen
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://www.chenyun.org/2026/05/16/2026-05-16-hanyan-infra-1/" title="HanyanOS 部署手记">https://www.chenyun.org/2026/05/16/2026-05-16-hanyan-infra-1/</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/DevOps/" rel="tag"># DevOps</a>
+              <a href="/tags/HanyanOS/" rel="tag"># HanyanOS</a>
+              <a href="/tags/Infrastructure/" rel="tag"># Infrastructure</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/05/15/2026-05-15-chinese-ai-four-dragons-open-weights/" rel="prev" title="中国AI四小龙：12天内四个开源模型挑战西方前沿——技术对比与思考">
+                  <i class="fa fa-angle-left"></i> 中国AI四小龙：12天内四个开源模型挑战西方前沿——技术对比与思考
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2022 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Michael Chen</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>
