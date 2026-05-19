@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"www.chenyun.org","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":true,"style":"flat"},"fold":{"enable":false,"height":500},"language":false,"border_radius":8},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false,"trigger":"auto"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="1. The ProblemHanyanOS runs on a dual-node topology. The Singapore Lightsail VPS (52.220.247.252) serves as the public edge, while the Brisbane N100 home server (192.168.1.18) hosts all real services">
+<meta property="og:type" content="article">
+<meta property="og:title" content="HanyanOS 部署手记">
+<meta property="og:url" content="https://www.chenyun.org/2026/05/19/2026-05-19-hanyan-infra-3/index.html">
+<meta property="og:site_name" content="望舒">
+<meta property="og:description" content="1. The ProblemHanyanOS runs on a dual-node topology. The Singapore Lightsail VPS (52.220.247.252) serves as the public edge, while the Brisbane N100 home server (192.168.1.18) hosts all real services">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-05-19T10:47:00.000Z">
+<meta property="article:modified_time" content="2026-05-19T10:48:18.326Z">
+<meta property="article:author" content="Michael Chen">
+<meta property="article:tag" content="DevOps">
+<meta property="article:tag" content="HanyanOS">
+<meta property="article:tag" content="Infrastructure">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://www.chenyun.org/2026/05/19/2026-05-19-hanyan-infra-3/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://www.chenyun.org/2026/05/19/2026-05-19-hanyan-infra-3/","path":"2026/05/19/2026-05-19-hanyan-infra-3/","title":"HanyanOS 部署手记"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>HanyanOS 部署手记 | 望舒</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">望舒</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">人的一生注定会遇到两个人一个惊艳了时光，一个温柔了岁月</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-The-Problem"><span class="nav-number">1.</span> <span class="nav-text">1. The Problem</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-Architecture-Overview"><span class="nav-number">2.</span> <span class="nav-text">2. Architecture Overview</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Data-Flow-Example-HTTPS-Blog-Request"><span class="nav-number">2.1.</span> <span class="nav-text">Data Flow (Example: HTTPS Blog Request)</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-Configuration"><span class="nav-number">3.</span> <span class="nav-text">3. Configuration</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#FRPS-VPS-Server"><span class="nav-number">3.1.</span> <span class="nav-text">FRPS (VPS Server)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#FRPC-N100-Client"><span class="nav-number">3.2.</span> <span class="nav-text">FRPC (N100 Client)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Systemd-Services"><span class="nav-number">3.3.</span> <span class="nav-text">Systemd Services</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-Complete-Port-Mapping-Table"><span class="nav-number">4.</span> <span class="nav-text">4. Complete Port Mapping Table</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-Security-Considerations"><span class="nav-number">5.</span> <span class="nav-text">5. Security Considerations</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-Problems-Encountered-Solutions"><span class="nav-number">6.</span> <span class="nav-text">6. Problems Encountered &amp; Solutions</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Problem-1-Port-Mapping-Drift"><span class="nav-number">6.1.</span> <span class="nav-text">Problem 1: Port Mapping Drift</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Problem-2-Connection-Drops-Under-Low-Traffic"><span class="nav-number">6.2.</span> <span class="nav-text">Problem 2: Connection Drops Under Low Traffic</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Problem-3-Initial-Port-Binding-Conflict"><span class="nav-number">6.3.</span> <span class="nav-text">Problem 3: Initial Port Binding Conflict</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Problem-4-Debugging-Tunnel-Connectivity"><span class="nav-number">6.4.</span> <span class="nav-text">Problem 4: Debugging Tunnel Connectivity</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-Comparison-FRP-vs-SSH-Reverse-Tunnel"><span class="nav-number">7.</span> <span class="nav-text">7. Comparison: FRP vs SSH Reverse Tunnel</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-Conclusion"><span class="nav-number">8.</span> <span class="nav-text">8. Conclusion</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Michael Chen"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">Michael Chen</p>
+  <div class="site-description" itemprop="description">Michael Chen 的技术博客，关注 AI、云计算、软件工程和科技趋势</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">14</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">52</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/michaelchen" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;michaelchen" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://linkedin.com/in/icemaple77" title="LinkedIn → https:&#x2F;&#x2F;linkedin.com&#x2F;in&#x2F;icemaple77" rel="noopener me" target="_blank"><i class="fab fa-linkedin fa-fw"></i>LinkedIn</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://ai.chenyun.org/" title="AI → https:&#x2F;&#x2F;ai.chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-robot fa-fw"></i>AI</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.chenyun.org/" title="Blog → https:&#x2F;&#x2F;blog.chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-blog fa-fw"></i>Blog</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:michael@chenyun.org" title="Email → mailto:michael@chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-envelope fa-fw"></i>Email</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.chenyun.org/2026/05/19/2026-05-19-hanyan-infra-3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="Michael Chen">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="望舒">
+      <meta itemprop="description" content="Michael Chen 的技术博客，关注 AI、云计算、软件工程和科技趋势">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="HanyanOS 部署手记 | 望舒">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          HanyanOS 部署手记
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-05-19 20:47:00" itemprop="dateCreated datePublished" datetime="2026-05-19T20:47:00+10:00">2026-05-19</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/tech/" itemprop="url" rel="index"><span itemprop="name">tech</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="1-The-Problem"><a href="#1-The-Problem" class="headerlink" title="1. The Problem"></a>1. The Problem</h2><p>HanyanOS runs on a dual-node topology. The Singapore Lightsail VPS (<code>52.220.247.252</code>) serves as the public edge, while the Brisbane N100 home server (<code>192.168.1.18</code>) hosts all real services — but it lives behind a carrier-grade NAT with no public IP and no possibility of port forwarding. The N100 is completely invisible to the internet.</p>
+<p>The naive approach — SSH reverse tunnels — works for a handful of ports but becomes brittle and unscalable beyond two or three services. With seven subdomains, a mail system, and a growing agent ecosystem, we needed a <strong>dedicated, encrypted, production-grade tunnel</strong>. Enter <strong>FRP (Fast Reverse Proxy)</strong>.</p>
+<h2 id="2-Architecture-Overview"><a href="#2-Architecture-Overview" class="headerlink" title="2. Architecture Overview"></a>2. Architecture Overview</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">┌─────────────────────────────────┐     ┌─────────────────────────────────┐</span><br><span class="line">│  VPS Singapore (Lightsail)      │     │  N100 Brisbane (Home)           │</span><br><span class="line">│  Public: 52.220.247.252         │     │  LAN: 192.168.1.18 (NAT&#x27;d)      │</span><br><span class="line">│                                 │     │                                 │</span><br><span class="line">│  FRPS (Server)                  │◄────┤  FRPC (Client)                  │</span><br><span class="line">│  :7443 ──── control channel ────┤     │  Connects outbound to VPS:7443 │</span><br><span class="line">│  :7444 → maps to ───────────────┤────►│  :80  (Nginx local)            │</span><br><span class="line">│  :7446 → maps to ───────────────┤────►│  :25  (SMTP)                   │</span><br><span class="line">│  :7447 → maps to ───────────────┤────►│  :465 (SMTP Submission)        │</span><br><span class="line">│  :7448 → maps to ───────────────┤────►│  :993 (IMAPS)                  │</span><br><span class="line">│  :7449 → maps to ───────────────┤────►│  :8091 (SnappyMail)            │</span><br><span class="line">│  :7450 → maps to ───────────────┤────►│  :5678 (n8n Webhook)           │</span><br><span class="line">│                                 │     │                                 │</span><br><span class="line">│  Backup: SSH Reverse Tunnel     │     │  Backup: SSH -R                │</span><br><span class="line">│  :2222 → N100:22                │     │  :8090 → N100:8090             │</span><br><span class="line">└─────────────────────────────────┘     └─────────────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<h3 id="Data-Flow-Example-HTTPS-Blog-Request"><a href="#Data-Flow-Example-HTTPS-Blog-Request" class="headerlink" title="Data Flow (Example: HTTPS Blog Request)"></a>Data Flow (Example: HTTPS Blog Request)</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Client → blog.chenyun.org → DNS A → VPS:443</span><br><span class="line">  → Nginx stream SNI → VPS:8443</span><br><span class="line">    → Nginx HTTPS proxy_pass → 127.0.0.1:7444</span><br><span class="line">      → FRPS forwards through tunnel → N100 FRPC</span><br><span class="line">        → 127.0.0.1:80 → N100 Nginx → Hexo static files</span><br></pre></td></tr></table></figure>
+
+<p>Every request traverses two reverse proxy layers (VPS Nginx + N100 Nginx) and one encrypted FRP tunnel — yet latency remains sub-50ms for most requests.</p>
+<h2 id="3-Configuration"><a href="#3-Configuration" class="headerlink" title="3. Configuration"></a>3. Configuration</h2><h3 id="FRPS-VPS-Server"><a href="#FRPS-VPS-Server" class="headerlink" title="FRPS (VPS Server)"></a>FRPS (VPS Server)</h3><figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /etc/frp/frps.ini</span></span><br><span class="line"><span class="section">[common]</span></span><br><span class="line"><span class="attr">bind_port</span> = <span class="number">7443</span></span><br><span class="line"><span class="attr">token</span> = chenyun-frp-<span class="number">2026</span></span><br><span class="line"><span class="attr">tcp_mux</span> = <span class="literal">true</span></span><br></pre></td></tr></table></figure>
+
+<p>Minimal configuration. The server listens on port 7443 for control connections and uses a shared token for authentication. <code>tcp_mux = true</code> multiplexes multiple service streams over a single TCP connection, reducing overhead.</p>
+<h3 id="FRPC-N100-Client"><a href="#FRPC-N100-Client" class="headerlink" title="FRPC (N100 Client)"></a>FRPC (N100 Client)</h3><figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /etc/frp/frpc.ini</span></span><br><span class="line"><span class="section">[common]</span></span><br><span class="line"><span class="attr">server_addr</span> = <span class="number">52.220</span>.<span class="number">247.252</span></span><br><span class="line"><span class="attr">server_port</span> = <span class="number">7443</span></span><br><span class="line"><span class="attr">token</span> = chenyun-frp-<span class="number">2026</span></span><br><span class="line"><span class="attr">tcp_mux</span> = <span class="literal">true</span></span><br><span class="line"><span class="attr">login_fail_exit</span> = <span class="literal">false</span></span><br><span class="line"></span><br><span class="line"><span class="section">[wordpress]</span></span><br><span class="line"><span class="attr">type</span> = tcp</span><br><span class="line"><span class="attr">local_ip</span> = <span class="number">127.0</span>.<span class="number">0.1</span></span><br><span class="line"><span class="attr">local_port</span> = <span class="number">8081</span></span><br><span class="line"><span class="attr">remote_port</span> = <span class="number">7444</span></span><br><span class="line"></span><br><span class="line"><span class="section">[ai-api]</span></span><br><span class="line"><span class="attr">type</span> = tcp</span><br><span class="line"><span class="attr">local_ip</span> = <span class="number">127.0</span>.<span class="number">0.1</span></span><br><span class="line"><span class="attr">local_port</span> = <span class="number">8090</span></span><br><span class="line"><span class="attr">remote_port</span> = <span class="number">7445</span></span><br></pre></td></tr></table></figure>
+
+<p>The client initiates outbound connections from the NAT’d N100 to the VPS, establishing persistent tunnels. <code>login_fail_exit = false</code> ensures the client retries on connection loss rather than crashing.</p>
+<h3 id="Systemd-Services"><a href="#Systemd-Services" class="headerlink" title="Systemd Services"></a>Systemd Services</h3><p>Both sides run as systemd services with auto-restart:</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /etc/systemd/system/frpc.service</span></span><br><span class="line"><span class="section">[Unit]</span></span><br><span class="line"><span class="attr">Description</span>=FRP Client</span><br><span class="line"><span class="attr">After</span>=network.target</span><br><span class="line"><span class="attr">Requires</span>=network-<span class="literal">on</span>line.target</span><br><span class="line"></span><br><span class="line"><span class="section">[Service]</span></span><br><span class="line"><span class="attr">Type</span>=simple</span><br><span class="line"><span class="attr">Restart</span>=always</span><br><span class="line"><span class="attr">RestartSec</span>=<span class="number">5</span></span><br><span class="line"><span class="attr">ExecStart</span>=/usr/local/bin/frpc -c /etc/frp/frpc.ini</span><br><span class="line"></span><br><span class="line"><span class="section">[Install]</span></span><br><span class="line"><span class="attr">WantedBy</span>=multi-user.target</span><br></pre></td></tr></table></figure>
+
+<h2 id="4-Complete-Port-Mapping-Table"><a href="#4-Complete-Port-Mapping-Table" class="headerlink" title="4. Complete Port Mapping Table"></a>4. Complete Port Mapping Table</h2><table>
+<thead>
+<tr>
+<th align="center">VPS FRP Port</th>
+<th align="center">Direction</th>
+<th align="center">N100 Port</th>
+<th>Service</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">7443</td>
+<td align="center">←</td>
+<td align="center">—</td>
+<td>Control channel (bidirectional)</td>
+</tr>
+<tr>
+<td align="center">7444</td>
+<td align="center">→</td>
+<td align="center">:80</td>
+<td>Web services (HTTP, all subdomains)</td>
+</tr>
+<tr>
+<td align="center">7446</td>
+<td align="center">→</td>
+<td align="center">:25</td>
+<td>SMTP inbound</td>
+</tr>
+<tr>
+<td align="center">7447</td>
+<td align="center">→</td>
+<td align="center">:465</td>
+<td>SMTP Submission (TLS)</td>
+</tr>
+<tr>
+<td align="center">7448</td>
+<td align="center">→</td>
+<td align="center">:993</td>
+<td>IMAPS</td>
+</tr>
+<tr>
+<td align="center">7449</td>
+<td align="center">→</td>
+<td align="center">:8091</td>
+<td>SnappyMail webmail</td>
+</tr>
+<tr>
+<td align="center">7450</td>
+<td align="center">→</td>
+<td align="center">:5678</td>
+<td>n8n webhook receiver</td>
+</tr>
+</tbody></table>
+<p>Note port 7445 is reserved for the AI API direct access. The gap between 7444 and 7446 is intentional — port 7445 was originally for the API tunnel but later consolidated through the web proxy layer.</p>
+<h2 id="5-Security-Considerations"><a href="#5-Security-Considerations" class="headerlink" title="5. Security Considerations"></a>5. Security Considerations</h2><p>FRP alone is not enough. The tunnel is protected at multiple layers:</p>
+<ol>
+<li><p><strong>Token Authentication</strong>: The shared token (<code>chenyun-frp-2026</code>) prevents unauthorized clients from joining the tunnel. In production, this should be rotated periodically.</p>
+</li>
+<li><p><strong>UFW Firewall</strong> (VPS): Only ports 22, 80, 443, 25, 465, 587, 993, 8443, and 7443 are open. The FRP data ports (7444–7450) are bound to <code>127.0.0.1</code> on the VPS side — they are <strong>not exposed to the public internet</strong>. Only Nginx on the VPS can reach them.</p>
+</li>
+<li><p><strong>N100 Isolation</strong>: The home server initiates all outbound connections. No inbound ports are open on the N100’s router. Even if an attacker compromises the VPS, they cannot directly reach the N100 without also compromising the FRP token.</p>
+</li>
+<li><p><strong>Fail2ban</strong>: Rate-limiting on SSHD and Nginx auth endpoints provides a second layer against brute-force attacks on any exposed management interfaces.</p>
+</li>
+</ol>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Internet → [UFW] → VPS:443/25/465/993 only</span><br><span class="line">                      ↓</span><br><span class="line">                 Nginx (127.0.0.1 only)</span><br><span class="line">                      ↓</span><br><span class="line">               FRP tunnel (token auth)</span><br><span class="line">                      ↓</span><br><span class="line">                 N100 (invisible)</span><br></pre></td></tr></table></figure>
+
+<h2 id="6-Problems-Encountered-Solutions"><a href="#6-Problems-Encountered-Solutions" class="headerlink" title="6. Problems Encountered &amp; Solutions"></a>6. Problems Encountered &amp; Solutions</h2><h3 id="Problem-1-Port-Mapping-Drift"><a href="#Problem-1-Port-Mapping-Drift" class="headerlink" title="Problem 1: Port Mapping Drift"></a>Problem 1: Port Mapping Drift</h3><p>Early on, FRP ports were changed multiple times as services were added and removed. The Nginx stream and proxy configurations were not always updated in sync, causing mysterious routing failures.</p>
+<p><strong>Solution</strong>: A version-controlled port mapping table was created in <code>HanyanOS/memory/infrastructure/network/README.md</code>. Any change to FRP configuration now requires a corresponding update to Nginx configs and a documented test of all affected subdomains.</p>
+<h3 id="Problem-2-Connection-Drops-Under-Low-Traffic"><a href="#Problem-2-Connection-Drops-Under-Low-Traffic" class="headerlink" title="Problem 2: Connection Drops Under Low Traffic"></a>Problem 2: Connection Drops Under Low Traffic</h3><p>FRP’s default keepalive settings caused tunnel disconnections during idle periods (e.g., 3 AM when no one accesses the blog).</p>
+<p><strong>Solution</strong>: Added <code>tcp_mux = true</code> and systemd <code>Restart=always</code> with <code>RestartSec=5</code>. The client reconnects automatically within seconds of any disruption. With <code>login_fail_exit = false</code>, transient network issues on the N100’s ISP connection are handled gracefully.</p>
+<h3 id="Problem-3-Initial-Port-Binding-Conflict"><a href="#Problem-3-Initial-Port-Binding-Conflict" class="headerlink" title="Problem 3: Initial Port Binding Conflict"></a>Problem 3: Initial Port Binding Conflict</h3><p>Port 7444 was initially used for both the AI API and WordPress before the routing was separated. Both services tried to bind to the same FRP remote port.</p>
+<p><strong>Solution</strong>: Separated services onto dedicated ports. The web traffic consolidation (all HTTP services through a single Nginx instance on N100:80) reduced the port count from 7+ to 3 main data ports plus the control channel.</p>
+<h3 id="Problem-4-Debugging-Tunnel-Connectivity"><a href="#Problem-4-Debugging-Tunnel-Connectivity" class="headerlink" title="Problem 4: Debugging Tunnel Connectivity"></a>Problem 4: Debugging Tunnel Connectivity</h3><p>When a service goes down, it’s not immediately obvious whether the issue is at the FRP tunnel level or the service level.</p>
+<p><strong>Solution</strong>: Added ICMP monitoring via the HanyanOS patrol cron job, which checks FRPC process status and connection state every 15 minutes. Logs are written to structured error files for analysis.</p>
+<h2 id="7-Comparison-FRP-vs-SSH-Reverse-Tunnel"><a href="#7-Comparison-FRP-vs-SSH-Reverse-Tunnel" class="headerlink" title="7. Comparison: FRP vs SSH Reverse Tunnel"></a>7. Comparison: FRP vs SSH Reverse Tunnel</h2><table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th align="center">FRP</th>
+<th align="center">SSH Reverse Tunnel</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Connection persistence</td>
+<td align="center">Excellent (auto-reconnect)</td>
+<td align="center">Good (autossh needed)</td>
+</tr>
+<tr>
+<td>Multi-port support</td>
+<td align="center">Native (any number of proxies)</td>
+<td align="center">Manual (-R per port)</td>
+</tr>
+<tr>
+<td>Encryption</td>
+<td align="center">TCP-level (optional TLS)</td>
+<td align="center">SSH channel encryption</td>
+</tr>
+<tr>
+<td>Resource usage</td>
+<td align="center">~15MB per binary</td>
+<td align="center">SSH daemon overhead</td>
+</tr>
+<tr>
+<td>Configuration</td>
+<td align="center">Declarative INI file</td>
+<td align="center">CLI flags</td>
+</tr>
+<tr>
+<td>TCP Multiplexing</td>
+<td align="center">Built-in (<code>tcp_mux</code>)</td>
+<td align="center">Not natively supported</td>
+</tr>
+</tbody></table>
+<p>FRP was chosen over SSH tunnels for its superior multi-port management and declarative configuration. Two SSH reverse tunnels are retained as a <strong>backup control plane</strong> (<code>:2222 → :22</code> for SSH access, <code>:8090 → :8090</code> for API emergency access), but all production traffic flows through FRP.</p>
+<h2 id="8-Conclusion"><a href="#8-Conclusion" class="headerlink" title="8. Conclusion"></a>8. Conclusion</h2><p>FRP provides the backbone of HanyanOS’s dual-node architecture, securely bridging the public VPS edge with the private N100 compute cluster. The setup handles six production services plus a control channel on a single outbound connection, with automatic reconnection, TCP multiplexing, and a security posture that keeps the home server completely invisible to the internet.</p>
+<p>For any homelab running behind NAT with multiple services to expose, FRP is a battle-tested, lightweight, and reliable choice — especially when paired with a hardened edge VPS.</p>
+<hr>
+<p><em>Next in series: Stalwart Mail System — Building a Self-Hosted Email Server on N100</em></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Michael Chen
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://www.chenyun.org/2026/05/19/2026-05-19-hanyan-infra-3/" title="HanyanOS 部署手记">https://www.chenyun.org/2026/05/19/2026-05-19-hanyan-infra-3/</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/DevOps/" rel="tag"># DevOps</a>
+              <a href="/tags/HanyanOS/" rel="tag"># HanyanOS</a>
+              <a href="/tags/Infrastructure/" rel="tag"># Infrastructure</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/05/19/2026-05-19-hanyan-infra-2/" rel="prev" title="HanyanOS 部署手记">
+                  <i class="fa fa-angle-left"></i> HanyanOS 部署手记
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2022 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Michael Chen</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

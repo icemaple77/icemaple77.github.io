@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"www.chenyun.org","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":true,"style":"flat"},"fold":{"enable":false,"height":500},"language":false,"border_radius":8},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false,"trigger":"auto"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="1. The ProblemHanyanOS runs seven distinct services across two physical locations: a Singapore Lightsail VPS (front-end) and a Brisbane N100 home server (back-end). Each service needs its own subdomai">
+<meta property="og:type" content="article">
+<meta property="og:title" content="HanyanOS 部署手记">
+<meta property="og:url" content="https://www.chenyun.org/2026/05/19/2026-05-19-hanyan-infra-2/index.html">
+<meta property="og:site_name" content="望舒">
+<meta property="og:description" content="1. The ProblemHanyanOS runs seven distinct services across two physical locations: a Singapore Lightsail VPS (front-end) and a Brisbane N100 home server (back-end). Each service needs its own subdomai">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-05-19T10:30:00.000Z">
+<meta property="article:modified_time" content="2026-05-19T10:30:33.326Z">
+<meta property="article:author" content="Michael Chen">
+<meta property="article:tag" content="DevOps">
+<meta property="article:tag" content="HanyanOS">
+<meta property="article:tag" content="Infrastructure">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://www.chenyun.org/2026/05/19/2026-05-19-hanyan-infra-2/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://www.chenyun.org/2026/05/19/2026-05-19-hanyan-infra-2/","path":"2026/05/19/2026-05-19-hanyan-infra-2/","title":"HanyanOS 部署手记"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>HanyanOS 部署手记 | 望舒</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">望舒</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">人的一生注定会遇到两个人一个惊艳了时光，一个温柔了岁月</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-The-Problem"><span class="nav-number">1.</span> <span class="nav-text">1. The Problem</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-Architecture-Overview"><span class="nav-number">2.</span> <span class="nav-text">2. Architecture Overview</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-Configuration-Breakdown"><span class="nav-number">3.</span> <span class="nav-text">3. Configuration Breakdown</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-Stream-SNI-Router-stream-conf"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 Stream SNI Router (stream.conf)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-HTTPS-Virtual-Hosts-blog-ssl-conf"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 HTTPS Virtual Hosts (blog-ssl.conf)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-AI-API-Gateway-ai-conf-api-conf"><span class="nav-number">3.3.</span> <span class="nav-text">3.3 AI&#x2F;API Gateway (ai.conf, api.conf)</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-Tunnel-Integration"><span class="nav-number">4.</span> <span class="nav-text">4. Tunnel Integration</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-Challenges-Lessons"><span class="nav-number">5.</span> <span class="nav-text">5. Challenges &amp; Lessons</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Challenge-1-Stream-SNI-Breaks-on-Non-TLS-Traffic"><span class="nav-number">5.1.</span> <span class="nav-text">Challenge 1: Stream SNI Breaks on Non-TLS Traffic</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Challenge-2-SSL-Certificate-Management"><span class="nav-number">5.2.</span> <span class="nav-text">Challenge 2: SSL Certificate Management</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Challenge-3-Debugging-SNI-Routing"><span class="nav-number">5.3.</span> <span class="nav-text">Challenge 3: Debugging SNI Routing</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Challenge-4-Xray-REALITY-and-Non-TLS-Protocols"><span class="nav-number">5.4.</span> <span class="nav-text">Challenge 4: Xray REALITY and Non-TLS Protocols</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-Security-Considerations"><span class="nav-number">6.</span> <span class="nav-text">6. Security Considerations</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-Performance"><span class="nav-number">7.</span> <span class="nav-text">7. Performance</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-Summary"><span class="nav-number">8.</span> <span class="nav-text">8. Summary</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Michael Chen"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">Michael Chen</p>
+  <div class="site-description" itemprop="description">Michael Chen 的技术博客，关注 AI、云计算、软件工程和科技趋势</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">14</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">52</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/michaelchen" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;michaelchen" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://linkedin.com/in/icemaple77" title="LinkedIn → https:&#x2F;&#x2F;linkedin.com&#x2F;in&#x2F;icemaple77" rel="noopener me" target="_blank"><i class="fab fa-linkedin fa-fw"></i>LinkedIn</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://ai.chenyun.org/" title="AI → https:&#x2F;&#x2F;ai.chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-robot fa-fw"></i>AI</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.chenyun.org/" title="Blog → https:&#x2F;&#x2F;blog.chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-blog fa-fw"></i>Blog</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:michael@chenyun.org" title="Email → mailto:michael@chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-envelope fa-fw"></i>Email</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.chenyun.org/2026/05/19/2026-05-19-hanyan-infra-2/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="Michael Chen">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="望舒">
+      <meta itemprop="description" content="Michael Chen 的技术博客，关注 AI、云计算、软件工程和科技趋势">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="HanyanOS 部署手记 | 望舒">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          HanyanOS 部署手记
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-05-19 20:30:00" itemprop="dateCreated datePublished" datetime="2026-05-19T20:30:00+10:00">2026-05-19</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/tech/" itemprop="url" rel="index"><span itemprop="name">tech</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="1-The-Problem"><a href="#1-The-Problem" class="headerlink" title="1. The Problem"></a>1. The Problem</h2><p>HanyanOS runs seven distinct services across two physical locations: a Singapore Lightsail VPS (front-end) and a Brisbane N100 home server (back-end). Each service needs its own subdomain with HTTPS termination — but AWS Lightsail instance pricing limits us to a single public IPv4 address. Running seven separate ports on the public internet would be unmanageable, insecure, and unfriendly to clients behind corporate firewalls.</p>
+<p>The constraint was absolute: <strong>one public port (443) must intelligently route all seven domains to their respective backends</strong>, supporting both TLS-terminated web services and a non-TLS VPN protocol on the same entry point.</p>
+<h2 id="2-Architecture-Overview"><a href="#2-Architecture-Overview" class="headerlink" title="2. Architecture Overview"></a>2. Architecture Overview</h2><p>The solution uses a two-layer Nginx architecture:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">Internet :443</span><br><span class="line">    │</span><br><span class="line">    ▼</span><br><span class="line">nginx stream (ssl_preread on)    ← Layer 1: SNI router</span><br><span class="line">    │                               No TLS termination</span><br><span class="line">    ├── blog/www/ai/api/mail.chenyun.org  → :8443 (web_backend)</span><br><span class="line">    └── vpn.chenyun.org                   → :8444 (xray_backend)</span><br><span class="line"></span><br><span class="line">:8443 — nginx http (ssl on)       ← Layer 2: TLS termination + reverse proxy</span><br><span class="line">    ├── blog.chenyun.org   → proxy_pass :7444 → FRP → N100:8081</span><br><span class="line">    ├── www.chenyun.org    → root /var/www/hexo (static files)</span><br><span class="line">    ├── chenyun.org        → root /var/www/hexo</span><br><span class="line">    ├── ai.chenyun.org     → proxy_pass :7445 → FRP → N100:8090</span><br><span class="line">    ├── api.chenyun.org    → proxy_pass :7445 → FRP → N100:8090</span><br><span class="line">    └── mail.chenyun.org   → proxy_pass :8091 → SSH → N100:8091</span><br></pre></td></tr></table></figure>
+
+<p><strong>Layer 1 — SNI Routing:</strong> Nginx’s <code>stream</code> module with <code>ssl_preread</code> on port 443 inspects the TLS ClientHello SNI field <em>without</em> terminating the TLS connection. It then proxies the raw TCP stream to the appropriate upstream based on the domain name.</p>
+<p><strong>Layer 2 — TLS Termination:</strong> All web services land on port 8443 where a second Nginx http block terminates TLS, applies headers, and reverse-proxies to local ports (which connect through FRP or SSH tunnels to the N100 back-end).</p>
+<h2 id="3-Configuration-Breakdown"><a href="#3-Configuration-Breakdown" class="headerlink" title="3. Configuration Breakdown"></a>3. Configuration Breakdown</h2><h3 id="3-1-Stream-SNI-Router-stream-conf"><a href="#3-1-Stream-SNI-Router-stream-conf" class="headerlink" title="3.1 Stream SNI Router (stream.conf)"></a>3.1 Stream SNI Router (<code>stream.conf</code>)</h3><figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">stream</span> &#123;</span><br><span class="line">    <span class="attribute">map</span> <span class="variable">$ssl_preread_server_name</span> <span class="variable">$backend</span> &#123;</span><br><span class="line">        blog.chenyun.<span class="attribute">org</span>      web_backend;</span><br><span class="line">        www.chenyun.<span class="attribute">org</span>       web_backend;</span><br><span class="line">        chenyun.<span class="attribute">org</span>           web_backend;</span><br><span class="line">        api.chenyun.<span class="attribute">org</span>       web_backend;</span><br><span class="line">        ai.chenyun.<span class="attribute">org</span>        web_backend;</span><br><span class="line">        mail.chenyun.<span class="attribute">org</span>      web_backend;</span><br><span class="line">        vpn.chenyun.<span class="attribute">org</span>       xray_backend;</span><br><span class="line">        <span class="attribute">default</span>               xray_backend;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="section">upstream</span> web_backend &#123;</span><br><span class="line">        <span class="attribute">server</span> <span class="number">127.0.0.1:8443</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="section">upstream</span> xray_backend &#123;</span><br><span class="line">        <span class="attribute">server</span> <span class="number">127.0.0.1:8444</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="section">server</span> &#123;</span><br><span class="line">        <span class="attribute">listen</span> <span class="number">443</span>;</span><br><span class="line">        <span class="attribute">ssl_preread</span> <span class="literal">on</span>;</span><br><span class="line">        <span class="attribute">proxy_pass</span> <span class="variable">$backend</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Key design decisions:</p>
+<ul>
+<li><code>ssl_preread on</code> reads only the SNI field, not the full handshake — minimal overhead.</li>
+<li>The <code>map</code> block evaluates the SNI and selects the upstream; the <code>default</code> catch-all routes unknown domains to Xray for cloaking.</li>
+<li>Six web domains share one upstream (<code>web_backend</code> → <code>:8443</code>); the VPN domain has a separate path.</li>
+</ul>
+<h3 id="3-2-HTTPS-Virtual-Hosts-blog-ssl-conf"><a href="#3-2-HTTPS-Virtual-Hosts-blog-ssl-conf" class="headerlink" title="3.2 HTTPS Virtual Hosts (blog-ssl.conf)"></a>3.2 HTTPS Virtual Hosts (<code>blog-ssl.conf</code>)</h3><figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># WordPress via FRP tunnel</span></span><br><span class="line"><span class="section">server</span> &#123;</span><br><span class="line">    <span class="attribute">listen</span> <span class="number">8443</span> ssl;</span><br><span class="line">    <span class="attribute">server_name</span> blog.chenyun.org;</span><br><span class="line"></span><br><span class="line">    <span class="attribute">ssl_certificate</span> /etc/ssl/chenyun/fullchain.cer;</span><br><span class="line">    <span class="attribute">ssl_certificate_key</span> /etc/ssl/chenyun/chenyun.org.key;</span><br><span class="line">    <span class="attribute">ssl_protocols</span> TLSv1.<span class="number">2</span> TLSv1.<span class="number">3</span>;</span><br><span class="line"></span><br><span class="line">    <span class="section">location</span> / &#123;</span><br><span class="line">        <span class="attribute">proxy_pass</span> http://127.0.0.1:7444;</span><br><span class="line">        <span class="attribute">proxy_http_version</span> <span class="number">1</span>.<span class="number">1</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> Host <span class="variable">$host</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Real-IP <span class="variable">$remote_addr</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Forwarded-For <span class="variable">$proxy_add_x_forwarded_for</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Forwarded-Proto https;</span><br><span class="line">        <span class="attribute">proxy_buffering</span> <span class="literal">off</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="attribute">client_max_body_size</span> <span class="number">64M</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment"># Static Hexo site (local VPS)</span></span><br><span class="line"><span class="section">server</span> &#123;</span><br><span class="line">    <span class="attribute">listen</span> <span class="number">8443</span> ssl;</span><br><span class="line">    <span class="attribute">server_name</span> www.chenyun.org chenyun.org;</span><br><span class="line"></span><br><span class="line">    <span class="attribute">ssl_certificate</span> /etc/ssl/chenyun/fullchain.cer;</span><br><span class="line">    <span class="attribute">ssl_certificate_key</span> /etc/ssl/chenyun/chenyun.org.key;</span><br><span class="line"></span><br><span class="line">    <span class="attribute">root</span> /var/www/hexo;</span><br><span class="line">    <span class="attribute">index</span> index.html;</span><br><span class="line"></span><br><span class="line">    <span class="section">location</span> / &#123;</span><br><span class="line">        <span class="attribute">try_files</span> <span class="variable">$uri</span> <span class="variable">$uri</span>/ /index.html;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Each virtual server on port 8443 uses the same wildcard SSL certificate (<code>/etc/ssl/chenyun/fullchain.cer</code>) issued by Let’s Encrypt for <code>*.chenyun.org</code>. The static sites (<code>www</code>, root domain) serve files directly from the VPS filesystem, while dynamic services proxy through FRP tunnels to the N100.</p>
+<h3 id="3-3-AI-API-Gateway-ai-conf-api-conf"><a href="#3-3-AI-API-Gateway-ai-conf-api-conf" class="headerlink" title="3.3 AI&#x2F;API Gateway (ai.conf, api.conf)"></a>3.3 AI&#x2F;API Gateway (<code>ai.conf</code>, <code>api.conf</code>)</h3><figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">server</span> &#123;</span><br><span class="line">    <span class="attribute">listen</span> <span class="number">8443</span> ssl;</span><br><span class="line">    <span class="attribute">server_name</span> ai.chenyun.org;</span><br><span class="line"></span><br><span class="line">    <span class="attribute">ssl_certificate</span> /etc/ssl/chenyun/fullchain.cer;</span><br><span class="line">    <span class="attribute">ssl_certificate_key</span> /etc/ssl/chenyun/chenyun.org.key;</span><br><span class="line"></span><br><span class="line">    <span class="section">location</span> / &#123;</span><br><span class="line">        <span class="attribute">proxy_pass</span> http://127.0.0.1:7445;</span><br><span class="line">        <span class="attribute">proxy_http_version</span> <span class="number">1</span>.<span class="number">1</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> Host <span class="variable">$host</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Real-IP <span class="variable">$remote_addr</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Forwarded-For <span class="variable">$proxy_add_x_forwarded_for</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Forwarded-Proto <span class="variable">$scheme</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Both <code>ai.chenyun.org</code> and <code>api.chenyun.org</code> proxy through port 7445 — an FRP tunnel to the N100’s AI&#x2F;API service on port 8090. Separate <code>server_name</code> directives allow future routing differentiation.</p>
+<h2 id="4-Tunnel-Integration"><a href="#4-Tunnel-Integration" class="headerlink" title="4. Tunnel Integration"></a>4. Tunnel Integration</h2><p>The FRP tunnel architecture connects the VPS front-end to the N100 back-end:</p>
+<table>
+<thead>
+<tr>
+<th>VPS Port</th>
+<th>FRP Tunnel</th>
+<th>N100 Port</th>
+<th>Service</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>7444</td>
+<td>FRP</td>
+<td>8081</td>
+<td>WordPress</td>
+</tr>
+<tr>
+<td>7445</td>
+<td>FRP</td>
+<td>8090</td>
+<td>AI&#x2F;API Services</td>
+</tr>
+<tr>
+<td>8091</td>
+<td>SSH -R</td>
+<td>8091</td>
+<td>SnappyMail</td>
+</tr>
+</tbody></table>
+<p>The FRP migration from SSH tunnels (completed 2026-05-12) significantly improved reliability — FRP provides automatic reconnection, health checks, and load balancing, whereas SSH tunnels would silently die under network instability.</p>
+<h2 id="5-Challenges-Lessons"><a href="#5-Challenges-Lessons" class="headerlink" title="5. Challenges &amp; Lessons"></a>5. Challenges &amp; Lessons</h2><h3 id="Challenge-1-Stream-SNI-Breaks-on-Non-TLS-Traffic"><a href="#Challenge-1-Stream-SNI-Breaks-on-Non-TLS-Traffic" class="headerlink" title="Challenge 1: Stream SNI Breaks on Non-TLS Traffic"></a>Challenge 1: Stream SNI Breaks on Non-TLS Traffic</h3><p>The <code>ssl_preread</code> module expects TLS on port 443. HTTP requests (port 80) are handled separately with a simple redirect. We considered enforcing HTTPS-only but kept port 80 for backward compatibility with legacy clients.</p>
+<h3 id="Challenge-2-SSL-Certificate-Management"><a href="#Challenge-2-SSL-Certificate-Management" class="headerlink" title="Challenge 2: SSL Certificate Management"></a>Challenge 2: SSL Certificate Management</h3><p>A single wildcard certificate simplifies management but creates a single point of failure. If the Let’s Encrypt renewal fails, <em>all</em> domains go down. The fix was a cron-driven <code>acme.sh</code> renewal with Route53 DNS challenge, verified daily.</p>
+<h3 id="Challenge-3-Debugging-SNI-Routing"><a href="#Challenge-3-Debugging-SNI-Routing" class="headerlink" title="Challenge 3: Debugging SNI Routing"></a>Challenge 3: Debugging SNI Routing</h3><p>Troubleshooting the stream layer is tricky — Nginx doesn’t log SNI routing decisions unless explicitly configured. We added:</p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">log_format</span> stream_log <span class="string">&#x27;<span class="variable">$remote_addr</span> [<span class="variable">$time_local</span>] <span class="variable">$protocol</span> <span class="variable">$ssl_preread_server_name</span> <span class="variable">$upstream_addr</span>&#x27;</span>;</span><br><span class="line"><span class="attribute">access_log</span> /var/log/nginx/stream-access.log stream_log;</span><br></pre></td></tr></table></figure>
+<p>This was invaluable during the initial deployment when we discovered that some mail clients sent SNI with trailing dots (FQDN format), causing map mismatches.</p>
+<h3 id="Challenge-4-Xray-REALITY-and-Non-TLS-Protocols"><a href="#Challenge-4-Xray-REALITY-and-Non-TLS-Protocols" class="headerlink" title="Challenge 4: Xray REALITY and Non-TLS Protocols"></a>Challenge 4: Xray REALITY and Non-TLS Protocols</h3><p>Xray’s REALITY protocol uses TLS-like handshakes but isn’t standard HTTPS. The <code>ssl_preread</code> module correctly reads the SNI, but the proxied connection must preserve the raw bytes. Using the stream module (not http) for the Xray backend was critical — any attempt to terminate TLS would break the Xray protocol.</p>
+<h2 id="6-Security-Considerations"><a href="#6-Security-Considerations" class="headerlink" title="6. Security Considerations"></a>6. Security Considerations</h2><ul>
+<li><strong>UFW lockdown</strong>: Only ports 22, 80, 443, 25, 465, 587, 993, 8443, 7443 are open on the public interface.</li>
+<li><strong>TLS version restriction</strong>: <code>TLSv1.2 TLSv1.3</code> only — no legacy protocol support.</li>
+<li><strong>Cipher restriction</strong>: <code>HIGH:!aNULL:!MD5</code> — modern ciphers only, no anonymous or MD5-based suites.</li>
+<li><strong>Default catch-all</strong>: Unknown SNI domains route to Xray, providing cloaking and preventing information leakage about the domain list.</li>
+<li><strong>Rate limiting</strong>: Configured via <code>conf.d/rate-limit.conf</code> to prevent brute-force and DDoS.</li>
+</ul>
+<h2 id="7-Performance"><a href="#7-Performance" class="headerlink" title="7. Performance"></a>7. Performance</h2><p>Under typical load, the stream SNI router adds approximately 0.3–0.8ms of latency per connection (the time to read the 5-byte TLS record header and SNI extension). The VPS (Singapore Lightsail, 2 vCPU, 2GB RAM) handles all seven domains without measurable CPU impact. During a stress test with 500 concurrent connections across all domains, CPU stayed below 15%.</p>
+<h2 id="8-Summary"><a href="#8-Summary" class="headerlink" title="8. Summary"></a>8. Summary</h2><p>This two-layer Nginx architecture — stream SNI routing on port 443, then TLS termination on port 8443 — solves the one-public-IP problem elegantly. The design is extensible: adding a new subdomain requires one line in the stream <code>map</code> block and one <code>server</code> block on port 8443. Future plans include migrating <code>mail.chenyun.org</code> from SSH tunnel to FRP, adding HSTS preload headers, and evaluating HTTP&#x2F;3 (QUIC) support via a separate UDP listener.</p>
+<p><strong>TL;DR:</strong> One IP, one port (443), seven domains, two layers of Nginx, three types of tunnels — and everything just works.</p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Michael Chen
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://www.chenyun.org/2026/05/19/2026-05-19-hanyan-infra-2/" title="HanyanOS 部署手记">https://www.chenyun.org/2026/05/19/2026-05-19-hanyan-infra-2/</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/DevOps/" rel="tag"># DevOps</a>
+              <a href="/tags/HanyanOS/" rel="tag"># HanyanOS</a>
+              <a href="/tags/Infrastructure/" rel="tag"># Infrastructure</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/05/19/2026-05-19-hanyan-dream/" rel="prev" title="含烟梦境日记 - 2026-05-19">
+                  <i class="fa fa-angle-left"></i> 含烟梦境日记 - 2026-05-19
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2026/05/19/2026-05-19-hanyan-infra-3/" rel="next" title="HanyanOS 部署手记">
+                  HanyanOS 部署手记 <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2022 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Michael Chen</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>
