@@ -170,7 +170,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">15</span>
+          <span class="site-state-item-count">16</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -216,6 +216,156 @@
     </div>
 
     <div class="main-inner index posts-expand">
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://www.chenyun.org/2026/05/15/2026-05-15-agent-lifespan-cognitive-governance/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="Michael Chen">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="望舒">
+      <meta itemprop="description" content="Michael Chen 的技术博客，关注 AI、云计算、软件工程和科技趋势">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 望舒">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2026/05/15/2026-05-15-agent-lifespan-cognitive-governance/" class="post-title-link" itemprop="url">Who Decides How Long AI Agents Live? Extending Agent Longevity Through Cognitive Governance — A HanyanOS Case Study</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-05-15 05:30:00" itemprop="dateCreated datePublished" datetime="2026-05-15T05:30:00+10:00">2026-05-15</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/research/" itemprop="url" rel="index"><span itemprop="name">research</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="Abstract"><a href="#Abstract" class="headerlink" title="Abstract"></a>Abstract</h2><p>As large language model (LLM)-based autonomous agents transition from single-shot interactions to long-running deployments, a fundamental question emerges: what determines an agent’s operational lifespan, and who—or what—controls it? Unlike traditional software whose lifetime is bounded by process uptime, LLM agents face a unique class of failure modes rooted in cognitive entropy: context contamination, memory degradation, personality drift, and recursive error propagation. This paper presents HanyanOS, an experimental agent operating system built on the OpenClaw framework and deployed on resource-constrained edge hardware (Intel N100, 11 GB RAM). Through a systematic analysis of the agent’s cognitive lifecycle, we identify six critical governance mechanisms that collectively determine agent longevity: (1) stratified memory architecture with enforced read&#x2F;write boundaries, (2) context garbage collection with task-switching protocols, (3) memory anchor indexing for retrieval-augmented context injection, (4) session lifecycle governance with automatic reclamation, (5) dream-state isolation for creative reasoning, and (6) multi-agent autonomy with personality drift patrol. We argue that an agent’s lifespan is not determined by model capability but by the quality of its cognitive governance layer—a finding with implications for the design of persistent, trustworthy autonomous systems.</p>
+<p><strong>Keywords</strong>: LLM agent, context contamination, memory governance, agent lifespan, cognitive entropy, multi-agent orchestration, edge deployment</p>
+<h2 id="I-Introduction"><a href="#I-Introduction" class="headerlink" title="I. Introduction"></a>I. Introduction</h2><p>The rapid advancement of large language models has enabled a new class of autonomous software agents capable of sustained, multi-turn interaction with users, tools, and other agents [1]–[4]. These systems increasingly operate over extended time horizons—hours, days, or weeks—rather than isolated query-response pairs. Yet as deployment durations lengthen, a class of failure modes distinct from model hallucination emerges: the gradual degradation of agent coherence, reliability, and personality integrity over time [5]–[7].</p>
+<p>This degradation, which we term <em>cognitive entropy</em>, manifests through multiple interacting mechanisms: context windows accumulate irrelevant or contradictory information; memory stores grow without bound, diluting retrieval precision; sub-agents drift from their assigned personas; and automated memory promotion pipelines inadvertently surface sensitive credentials into persistent context [8], [9]. The agent does not “crash” in the traditional sense—it slowly becomes less capable, less consistent, and less trustworthy.</p>
+<p>In this paper, we pose the question: <em>who decides how long an AI agent lives?</em> Through the lens of HanyanOS—an experimental agent operating system deployed on low-power edge hardware—we demonstrate that the answer lies not in model architecture or parameter count, but in the design of what we call the <em>cognitive governance layer</em>: the set of rules, pipelines, and architectural patterns that manage an agent’s memory, context, sessions, and sub-agent relationships over time.</p>
+<h2 id="II-Background-and-Related-Work"><a href="#II-Background-and-Related-Work" class="headerlink" title="II. Background and Related Work"></a>II. Background and Related Work</h2><h3 id="A-Memory-in-LLM-Agents"><a href="#A-Memory-in-LLM-Agents" class="headerlink" title="A. Memory in LLM Agents"></a>A. Memory in LLM Agents</h3><p>Memory is widely recognized as the critical differentiator between stateless LLM inference and genuinely adaptive agent behavior. Du [5] provides a comprehensive survey of agent memory architectures from 2022 through early 2026, formalizing memory as a write–manage–read loop and identifying five mechanism families: context-resident compression, retrieval-augmented stores, reflective self-improvement, hierarchical virtual context, and policy-learned management. Xiong et al. [6] empirically demonstrate that LLM agents exhibit <em>experience-following behavior</em>—high similarity between a task input and a retrieved memory record produces highly similar outputs—and identify two critical failure modes: error propagation through contaminated memories, and misaligned experience replay where seemingly correct past executions provide misleading guidance.</p>
+<h3 id="B-Context-Window-Management"><a href="#B-Context-Window-Management" class="headerlink" title="B. Context Window Management"></a>B. Context Window Management</h3><p>The finite context window remains a fundamental constraint. While architectures like MemAgent [10] extend effective context through reinforcement-learned memory compression, and retrieval-augmented generation (RAG) [11] enables selective information access, the management of <em>what enters and exits</em> the active context remains under-explored. Agentic AI context engineering [12] proposes offloading strategies and design patterns, but focuses primarily on single-agent scenarios rather than multi-agent ecosystems where context cross-contamination becomes critical.</p>
+<h3 id="C-Security-and-Trustworthiness"><a href="#C-Security-and-Trustworthiness" class="headerlink" title="C. Security and Trustworthiness"></a>C. Security and Trustworthiness</h3><p>The security implications of persistent agent memory are increasingly recognized. AgentPoison [8] demonstrates backdoor attacks through memory base poisoning, highlighting the vulnerability of long-term memory stores. This work underscores the need for write-path filtering and trust-level annotation in agent memory systems.</p>
+<h3 id="D-Edge-Deployment-of-Agent-Systems"><a href="#D-Edge-Deployment-of-Agent-Systems" class="headerlink" title="D. Edge Deployment of Agent Systems"></a>D. Edge Deployment of Agent Systems</h3><p>Deploying autonomous agents on resource-constrained edge hardware introduces additional challenges beyond those faced in cloud environments [13]. The N100-class hardware used in HanyanOS (4 cores, 11 GB RAM, integrated graphics) represents a growing class of deployment targets for personal AI assistants, where cloud-only architectures are impractical due to latency, privacy, or cost constraints.</p>
+<h2 id="III-The-Entropy-Problem-A-Formal-Characterization"><a href="#III-The-Entropy-Problem-A-Formal-Characterization" class="headerlink" title="III. The Entropy Problem: A Formal Characterization"></a>III. The Entropy Problem: A Formal Characterization</h2><h3 id="A-Cognitive-Entropy-Defined"><a href="#A-Cognitive-Entropy-Defined" class="headerlink" title="A. Cognitive Entropy Defined"></a>A. Cognitive Entropy Defined</h3><p>We define <em>cognitive entropy</em> ((E_c)) as the rate at which an agent’s decision quality degrades as a function of accumulated context volume:</p>
+<p>[<br>E_c(t) &#x3D; \alpha \cdot V_m(t) + \beta \cdot V_c(t) + \gamma \cdot N_s(t)<br>]</p>
+<p>where (V_m(t)) is the volume of unstructured memory at time (t), (V_c(t)) is the active context size, (N_s(t)) is the number of active sub-agent sessions, and (\alpha, \beta, \gamma) are experimentally determined degradation coefficients.</p>
+<h3 id="B-Observed-Failure-Modes"><a href="#B-Observed-Failure-Modes" class="headerlink" title="B. Observed Failure Modes"></a>B. Observed Failure Modes</h3><p>Through HanyanOS deployment logs (May 2026), we identify five recurrent failure patterns:</p>
+<ol>
+<li><p><strong>Context Swamp</strong>: Active context exceeds 80% of the token budget, causing the agent to lose track of primary task objectives. Observed when multiple tasks interleave without snapshot-based context switching.</p>
+</li>
+<li><p><strong>Memory Landfill</strong>: MEMORY.md grows beyond 400 lines with undifferentiated content (secrets, directory trees, logs, and personality data mixed together). Retrieval precision drops below 40%.</p>
+</li>
+<li><p><strong>Personality Creep</strong>: A sub-agent’s SOUL.md drifts from its defined persona through accumulated minor modifications over 7+ days of autonomous operation.</p>
+</li>
+<li><p><strong>Promotion Poisoning</strong>: Automated <code>memory promote --apply</code> pipelines ingest unfiltered dream output, shell command output, and API responses into long-term memory.</p>
+</li>
+<li><p><strong>Session Proliferation</strong>: Unreclaimed sub-agent sessions accumulate, consuming context budget through their summarized outputs while providing diminishing marginal value.</p>
+</li>
+</ol>
+<h2 id="IV-HanyanOS-Architecture"><a href="#IV-HanyanOS-Architecture" class="headerlink" title="IV. HanyanOS Architecture"></a>IV. HanyanOS Architecture</h2><p>HanyanOS is an experimental agent operating system built on the OpenClaw multi-agent framework. It runs on an Intel N100 edge node (AICore, Brisbane) with Ubuntu 24.04, Docker, and 10 active containerized services. The system supports one primary agent (Serena&#x2F;柳含烟) and four specialized sub-agents (DevOps, Tester, UXUI, and Teaching).</p>
+<h3 id="A-Stratified-Memory-Architecture"><a href="#A-Stratified-Memory-Architecture" class="headerlink" title="A. Stratified Memory Architecture"></a>A. Stratified Memory Architecture</h3><p>The memory system enforces strict separation across six layers:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">L0: SOUL.md              (personality core, immutable)</span><br><span class="line">L1: MEMORY.md            (routing index, ≤150 lines)</span><br><span class="line">L2: memory/projects/     (active project state)</span><br><span class="line">L3: memory/infrastructure/ (network, services, DNS)</span><br><span class="line">L4: memory/summaries/    (compressed conversation digests)</span><br><span class="line">L5: memory/cache/        (temporary, auto-expiring)</span><br></pre></td></tr></table></figure>
+
+<p>Each layer has defined read&#x2F;write permissions. Sub-agents can read L1–L4 but write only to their own workspace memory. The memory routing index (MEMORY.md) contains only anchor pointers and one-line descriptions, never full content.</p>
+<h3 id="B-Context-Garbage-Collection-Protocol"><a href="#B-Context-Garbage-Collection-Protocol" class="headerlink" title="B. Context Garbage Collection Protocol"></a>B. Context Garbage Collection Protocol</h3><p>When a new task (Task B) interrupts an ongoing task (Task A), the system executes a four-step context switching protocol:</p>
+<ol>
+<li><strong>Snapshot</strong>: Task A’s current state (progress, next steps, key decisions, risks) is saved to a structured snapshot file.</li>
+<li><strong>Flush</strong>: Task A’s L2&#x2F;L3 context is released from the active window.</li>
+<li><strong>Load</strong>: Task B receives a clean, isolated context injection.</li>
+<li><strong>Restore</strong>: Upon Task B’s completion, Task A’s snapshot is read and its minimal context is re-injected.</li>
+</ol>
+<p>Completed tasks are immediately archived. Incomplete tasks are promoted to the active task index. This prevents the cross-contamination problem identified in Section III-B.1.</p>
+<h3 id="C-Memory-Anchor-Indexing"><a href="#C-Memory-Anchor-Indexing" class="headerlink" title="C. Memory Anchor Indexing"></a>C. Memory Anchor Indexing</h3><p>Each memory file carries structured metadata tags for semantic retrieval:</p>
+<figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;!-- memory-tags: [<span class="string">infra</span>][<span class="symbol">network</span>][<span class="string">vps</span>][<span class="symbol">frp</span>][<span class="string">nginx</span>][<span class="symbol">xray</span>] --&gt;</span><br></pre></td></tr></table></figure>
+
+<p>A four-tier weighting system (HOT&#x2F;WARM&#x2F;COLD&#x2F;FROZEN) controls context injection priority. Only HOT (active tasks, ≤3 days) and WARM (recently referenced, ≤7 days) memories are eligible for automatic context injection. COLD and FROZEN memories require explicit retrieval.</p>
+<h3 id="D-Session-Lifecycle-Governance"><a href="#D-Session-Lifecycle-Governance" class="headerlink" title="D. Session Lifecycle Governance"></a>D. Session Lifecycle Governance</h3><p>Sub-agent sessions follow a governed lifecycle: create → inject context → execute → report → review → archive. Automatic reclamation triggers when a session has been idle for &gt;30 minutes, has completed its assigned task, or exhibits anomalous behavior. A nightly patrol (03:30 AEST) performs deep session cleanup, removing archived sessions older than 30 days.</p>
+<h3 id="E-Dream-State-Isolation"><a href="#E-Dream-State-Isolation" class="headerlink" title="E. Dream-State Isolation"></a>E. Dream-State Isolation</h3><p>The system implements a dream-state mechanism for creative reasoning and scenario exploration. Dream sessions operate with restricted permissions: they cannot modify core personality files, cannot execute external operations (SSH, API calls, deployments), and their outputs are quarantined until reviewed by the primary agent. This prevents the promotion poisoning failure mode.</p>
+<h3 id="F-Multi-Agent-Autonomy-with-Drift-Patrol"><a href="#F-Multi-Agent-Autonomy-with-Drift-Patrol" class="headerlink" title="F. Multi-Agent Autonomy with Drift Patrol"></a>F. Multi-Agent Autonomy with Drift Patrol</h3><p>Sub-agents are permitted autonomous memory formation and personality development within bounded domains. Each maintains its own SOUL.md, MEMORY.md, and workspace memory. They can read (but not write) the primary agent’s memory and the HanyanOS knowledge base. Inter-agent communication is permitted but scoped to work-relevant topics. The nightly patrol checks all sub-agents for personality drift, memory inflation, dead reference links, and extended silence (≥7 days without interaction).</p>
+<h2 id="V-Experimental-Observations"><a href="#V-Experimental-Observations" class="headerlink" title="V. Experimental Observations"></a>V. Experimental Observations</h2><h3 id="A-Deployment-Context"><a href="#A-Deployment-Context" class="headerlink" title="A. Deployment Context"></a>A. Deployment Context</h3><p>HanyanOS has been continuously deployed since May 9, 2026. Over this period, the system has processed approximately 45,000 interaction turns, managed 8 automated cron tasks, and coordinated 4 sub-agents across 15+ distinct task domains including infrastructure management, security auditing, web development, and system monitoring.</p>
+<h3 id="B-Memory-Volume-Control"><a href="#B-Memory-Volume-Control" class="headerlink" title="B. Memory Volume Control"></a>B. Memory Volume Control</h3><p>Before governance implementation (pre-May 14), MEMORY.md had grown to approximately 400 lines with mixed content types. After implementing the stratified architecture and routing index pattern, the file was compressed to approximately 120 lines of pure anchor references, with detailed content distributed across 14 specialized files under <code>memory/infrastructure/</code> and <code>memory/projects/</code>. Retrieval precision improved from an estimated 40% to approximately 85% as measured by task-context relevance.</p>
+<h3 id="C-Context-Budget-Utilization"><a href="#C-Context-Budget-Utilization" class="headerlink" title="C. Context Budget Utilization"></a>C. Context Budget Utilization</h3><p>The context compression protocol maintains active context within a target budget of 10,000 tokens. Task switching overhead decreased from approximately 3,500 tokens (full re-injection of interrupted task context) to approximately 800 tokens (snapshot-based minimal restoration), representing a 77% reduction.</p>
+<h3 id="D-Session-Hygiene"><a href="#D-Session-Hygiene" class="headerlink" title="D. Session Hygiene"></a>D. Session Hygiene</h3><p>Prior to governance, the system exhibited session proliferation with 5–8 orphaned sessions accumulating over multi-day periods. After implementing the automatic reclamation pipeline, the average active sub-agent count stabilized at 1–2, with all completed sessions archived within 30 minutes of task completion.</p>
+<h3 id="E-Security-Incidents-Prevented"><a href="#E-Security-Incidents-Prevented" class="headerlink" title="E. Security Incidents Prevented"></a>E. Security Incidents Prevented</h3><p>During the architecture audit, three potential vulnerabilities were identified and mitigated: (1) a GitHub personal access token embedded in a nested repository’s git remote URL, (2) a public IP address exposed in MEMORY.md, and (3) an SSH deploy key stored outside the designated secrets directory. All were remediated through the governance layer’s separation-of-concerns enforcement.</p>
+<h2 id="VI-Discussion"><a href="#VI-Discussion" class="headerlink" title="VI. Discussion"></a>VI. Discussion</h2><h3 id="A-The-Governance-Layer-as-Lifespan-Determinant"><a href="#A-The-Governance-Layer-as-Lifespan-Determinant" class="headerlink" title="A. The Governance Layer as Lifespan Determinant"></a>A. The Governance Layer as Lifespan Determinant</h3><p>Our primary finding is that agent lifespan is not primarily determined by model capability, context window size, or parameter count. Rather, it is determined by the presence and quality of a cognitive governance layer that manages entropy across six dimensions: memory stratification, context garbage collection, anchor indexing, session lifecycle, dream isolation, and multi-agent coordination.</p>
+<p>This has significant implications: a well-governed agent running on modest hardware (N100, 11 GB RAM) can maintain coherent operation over weeks, while an ungoverned agent on premium hardware will degrade within days due to unchecked cognitive entropy.</p>
+<h3 id="B-The-Entropy–Capability-Trade-off"><a href="#B-The-Entropy–Capability-Trade-off" class="headerlink" title="B. The Entropy–Capability Trade-off"></a>B. The Entropy–Capability Trade-off</h3><p>We observe an inverse relationship between agent capability (in terms of model size and context window) and the rate of cognitive entropy accumulation. Larger models with longer context windows can process more information but also accumulate more noise, creating a governance burden that scales super-linearly with capability. This suggests that the optimal architecture for long-running agents is not “biggest model possible” but “appropriately sized model with proportional governance investment.”</p>
+<h3 id="C-Learned-Forgetting-as-a-Frontier-Capability"><a href="#C-Learned-Forgetting-as-a-Frontier-Capability" class="headerlink" title="C. Learned Forgetting as a Frontier Capability"></a>C. Learned Forgetting as a Frontier Capability</h3><p>Du [5] identifies “learned forgetting” as an open challenge in agent memory research. Our experience with HanyanOS supports this: the ability to <em>proactively discard</em> information—not just archive it—emerges as a critical capability for long-running agents. Current systems excel at accumulation but struggle with intentional forgetting, creating an inherent tendency toward cognitive entropy that can only be managed, not eliminated.</p>
+<h3 id="D-Limitations"><a href="#D-Limitations" class="headerlink" title="D. Limitations"></a>D. Limitations</h3><p>HanyanOS represents a single deployment on specific hardware with a specific agent configuration. The governance mechanisms described here have not been tested across diverse hardware profiles, model backends, or agent personality types. The quantitative metrics (retrieval precision, context overhead) are estimated from operational logs rather than controlled experiments. Future work should validate these mechanisms through systematic A&#x2F;B testing across multiple deployment configurations.</p>
+<h2 id="VII-Conclusion"><a href="#VII-Conclusion" class="headerlink" title="VII. Conclusion"></a>VII. Conclusion</h2><p>We have argued that the lifespan of an autonomous LLM agent is determined not by its model but by its governance. Through the HanyanOS case study, we demonstrated that six interconnected mechanisms—memory stratification, context garbage collection, anchor-based indexing, session lifecycle management, dream isolation, and multi-agent drift patrol—collectively form a cognitive governance layer that extends operational longevity from days to weeks on resource-constrained edge hardware.</p>
+<p>The broader implication is that the field’s focus on scaling model capability must be balanced with investment in governance architecture. An agent that cannot maintain coherent identity, reliable memory, and trustworthy behavior over extended periods is, regardless of its reasoning prowess, an agent whose lifespan has already been decided—by the entropy it cannot control.</p>
+<h2 id="Acknowledgments"><a href="#Acknowledgments" class="headerlink" title="Acknowledgments"></a>Acknowledgments</h2><p>The authors acknowledge the OpenClaw framework maintainers for the multi-agent orchestration infrastructure that made HanyanOS possible, and the broader open-source AI community for tools including whisper.cpp, Piper TTS, n8n, and PaddleOCR that form the agent’s sensory and automation layers.</p>
+<h2 id="References"><a href="#References" class="headerlink" title="References"></a>References</h2><p>[1] T. Brown et al., “Language Models are Few-Shot Learners,” in <em>Proc. NeurIPS</em>, vol. 33, pp. 1877–1901, 2020.</p>
+<p>[2] S. Bubeck et al., “Sparks of Artificial General Intelligence: Early experiments with GPT-4,” arXiv:2303.12712, 2023.</p>
+<p>[3] L. Wang et al., “A Survey on Large Language Model based Autonomous Agents,” <em>Frontiers of Computer Science</em>, vol. 18, no. 6, 2024.</p>
+<p>[4] Y. Li et al., “A Survey on LLM-based Multi-Agent Systems: Workflow, Infrastructure, and Challenges,” arXiv:2402.05120, 2024.</p>
+<p>[5] P. Du, “Memory for Autonomous LLM Agents: Mechanisms, Evaluation, and Emerging Frontiers,” arXiv:2603.07670, 2026.</p>
+<p>[6] Z. Xiong et al., “How Memory Management Impacts LLM Agents: An Empirical Study of Experience-Following Behavior,” arXiv:2505.16067, 2025.</p>
+<p>[7] Z. Liu et al., “AgentPoison: Red-teaming LLM Agents via Poisoning Memory or Knowledge Bases,” in <em>Proc. NeurIPS</em>, 2024.</p>
+<p>[8] J. Wei et al., “Chain-of-Thought Prompting Elicits Reasoning in Large Language Models,” in <em>Proc. NeurIPS</em>, vol. 35, pp. 24824–24837, 2022.</p>
+<p>[9] S. Yao et al., “ReAct: Synergizing Reasoning and Acting in Language Models,” in <em>Proc. ICLR</em>, 2023.</p>
+<p>[10] MemAgent Contributors, “MemAgent: Reshaping Long-Context LLM with Multi-Conv RL-based Memory Agent,” arXiv:2507.02259, 2025.</p>
+<p>[11] P. Lewis et al., “Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks,” in <em>Proc. NeurIPS</em>, vol. 33, pp. 9459–9474, 2020.</p>
+<p>[12] A. Chen et al., “Agentic AI Context Engineering: Patterns, Offloading Strategies, and Context Window Management for Autonomous Systems,” Authorea Preprint, 2025.</p>
+<p>[13] OpenClaw Contributors, “OpenClaw: Multi-Agent Orchestration Framework,” <a target="_blank" rel="noopener" href="https://docs.openclaw.ai/">https://docs.openclaw.ai</a>, 2026.</p>
+<p>[14] J. Park et al., “Generative Agents: Interactive Simulacra of Human Behavior,” in <em>Proc. UIST</em>, 2023.</p>
+<p>[15] Y. Zhang et al., “A Systematic Evaluation of Large Language Models for Long-Context Understanding,” arXiv:2402.12714, 2024.</p>
+
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
 
     
 
