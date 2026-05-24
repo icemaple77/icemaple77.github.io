@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"www.chenyun.org","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":true,"style":"flat"},"fold":{"enable":false,"height":500},"language":false,"border_radius":8},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false,"trigger":"auto"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="1. OverviewModern AI workloads demand more than a single monolithic chat model. In HanyanOS, we run 7 specialized OpenClaw agents on an Intel N100 mini-server, each with distinct roles, model profiles">
+<meta property="og:type" content="article">
+<meta property="og:title" content="HanyanOS 部署手记">
+<meta property="og:url" content="https://www.chenyun.org/2026/05/25/2026-05-25-hanyan-infra-6/index.html">
+<meta property="og:site_name" content="望舒">
+<meta property="og:description" content="1. OverviewModern AI workloads demand more than a single monolithic chat model. In HanyanOS, we run 7 specialized OpenClaw agents on an Intel N100 mini-server, each with distinct roles, model profiles">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-05-24T23:45:00.000Z">
+<meta property="article:modified_time" content="2026-05-24T23:44:41.140Z">
+<meta property="article:author" content="Michael Chen">
+<meta property="article:tag" content="DevOps">
+<meta property="article:tag" content="HanyanOS">
+<meta property="article:tag" content="Infrastructure">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://www.chenyun.org/2026/05/25/2026-05-25-hanyan-infra-6/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://www.chenyun.org/2026/05/25/2026-05-25-hanyan-infra-6/","path":"2026/05/25/2026-05-25-hanyan-infra-6/","title":"HanyanOS 部署手记"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>HanyanOS 部署手记 | 望舒</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">望舒</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">人的一生注定会遇到两个人一个惊艳了时光，一个温柔了岁月</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-Overview"><span class="nav-number">1.</span> <span class="nav-text">1. Overview</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-Architecture-Overview"><span class="nav-number">2.</span> <span class="nav-text">2. Architecture Overview</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-Agent-Definitions-and-Model-Assignments"><span class="nav-number">3.</span> <span class="nav-text">3. Agent Definitions and Model Assignments</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-Delegation-Workflow"><span class="nav-number">4.</span> <span class="nav-text">4. Delegation Workflow</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-Agent-to-Agent-A2A-Communication"><span class="nav-number">5.</span> <span class="nav-text">5. Agent-to-Agent (A2A) Communication</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-Memory-System-Integration"><span class="nav-number">6.</span> <span class="nav-text">6. Memory System Integration</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-Cost-Optimization-%E2%80%94-The-Accountant-Agent"><span class="nav-number">7.</span> <span class="nav-text">7. Cost Optimization — The Accountant Agent</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-Problems-Encountered-and-Solutions"><span class="nav-number">8.</span> <span class="nav-text">8. Problems Encountered and Solutions</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Problem-1-Agent-Context-Pollution"><span class="nav-number">8.1.</span> <span class="nav-text">Problem 1: Agent Context Pollution</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Problem-2-Elevated-Tool-Overuse"><span class="nav-number">8.2.</span> <span class="nav-text">Problem 2: Elevated Tool Overuse</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Problem-3-Sub-Agent-Circular-Delegation"><span class="nav-number">8.3.</span> <span class="nav-text">Problem 3: Sub-Agent Circular Delegation</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Problem-4-N100-Resource-Contention"><span class="nav-number">8.4.</span> <span class="nav-text">Problem 4: N100 Resource Contention</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9-Memory-and-Reports-Directory-Structure"><span class="nav-number">9.</span> <span class="nav-text">9. Memory and Reports Directory Structure</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#10-Summary"><span class="nav-number">10.</span> <span class="nav-text">10. Summary</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Michael Chen"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">Michael Chen</p>
+  <div class="site-description" itemprop="description">Michael Chen 的技术博客，关注 AI、云计算、软件工程和科技趋势</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">23</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">52</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/michaelchen" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;michaelchen" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://linkedin.com/in/icemaple77" title="LinkedIn → https:&#x2F;&#x2F;linkedin.com&#x2F;in&#x2F;icemaple77" rel="noopener me" target="_blank"><i class="fab fa-linkedin fa-fw"></i>LinkedIn</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://ai.chenyun.org/" title="AI → https:&#x2F;&#x2F;ai.chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-robot fa-fw"></i>AI</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.chenyun.org/" title="Blog → https:&#x2F;&#x2F;blog.chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-blog fa-fw"></i>Blog</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:michael@chenyun.org" title="Email → mailto:michael@chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-envelope fa-fw"></i>Email</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.chenyun.org/2026/05/25/2026-05-25-hanyan-infra-6/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="Michael Chen">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="望舒">
+      <meta itemprop="description" content="Michael Chen 的技术博客，关注 AI、云计算、软件工程和科技趋势">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="HanyanOS 部署手记 | 望舒">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          HanyanOS 部署手记
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-05-25 09:45:00" itemprop="dateCreated datePublished" datetime="2026-05-25T09:45:00+10:00">2026-05-25</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/tech/" itemprop="url" rel="index"><span itemprop="name">tech</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="1-Overview"><a href="#1-Overview" class="headerlink" title="1. Overview"></a>1. Overview</h2><p>Modern AI workloads demand more than a single monolithic chat model. In HanyanOS, we run <strong>7 specialized OpenClaw agents</strong> on an Intel N100 mini-server, each with distinct roles, model profiles, and operational constraints. The orchestrator agent—Serena (柳含烟)—holds supreme command and routes, reviews, and audits every task across the agent mesh.</p>
+<p>This post dissects the architecture: agent topology, delegation workflow, model assignment strategies, subagent permission gates, and the hard-won lessons from running this multi-agent assembly in production on a 4-core&#x2F;6W Intel N100.</p>
+<span id="more"></span>
+
+<h2 id="2-Architecture-Overview"><a href="#2-Architecture-Overview" class="headerlink" title="2. Architecture Overview"></a>2. Architecture Overview</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">┌──────────────────────────────────────────────────┐</span><br><span class="line">│                  Gateway (OpenClaw)               │</span><br><span class="line">│  Port 18789 · Tailscale · Feishu · WebChat       │</span><br><span class="line">├──────────────────────────────────────────────────┤</span><br><span class="line">│                                                    │</span><br><span class="line">│   ╔══════════════════ Serena (main) ═══════════╗  │</span><br><span class="line">│   ║  Orchestrator  ·  Decision Router          ║  │</span><br><span class="line">│   ║  Model: deepseek-v4-pro + fallbacks        ║  │</span><br><span class="line">│   ║  Tools: elevated + browser                 ║  │</span><br><span class="line">│   ╚════════════════════════════════════════════╝  │</span><br><span class="line">│         │           │         │          │         │</span><br><span class="line">│    ┌────┴──┐  ┌─────┴──┐ ┌──┴─────┐ ┌──┴─────┐  │</span><br><span class="line">│    │ Coder │  │ Devops │ │Tester  │ │Security│  │</span><br><span class="line">│    │漫歌   │  │清雅    │ │钟离燕  │ │洛飞烟  │  │</span><br><span class="line">│    └───┬───┘  └───┬────┘ └───┬────┘ └───┬────┘  │</span><br><span class="line">│        │          │          │           │        │</span><br><span class="line">│    ┌───┴────┐ ┌──┴───────┐  │           │        │</span><br><span class="line">│    │Accountant│ │  UX/UI   │  │           │        │</span><br><span class="line">│    │ 江惜月  │ │ 楚灵儿   │  │           │        │</span><br><span class="line">│    └────────┘ └──────────┘  │           │        │</span><br><span class="line">│                              └───────────┘        │</span><br><span class="line">│              Agent-to-Agent (A2A) Bus             │</span><br><span class="line">└──────────────────────────────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<p><strong>Key design principle</strong>: All external input enters through Serena. Sub-agents never communicate with external channels directly. This creates a single point of control for security auditing, cost tracking, and quality review.</p>
+<h2 id="3-Agent-Definitions-and-Model-Assignments"><a href="#3-Agent-Definitions-and-Model-Assignments" class="headerlink" title="3. Agent Definitions and Model Assignments"></a>3. Agent Definitions and Model Assignments</h2><p>Each agent has a unique <code>systemPromptOverride</code> that defines its persona, workflow rules, and constraints. Here is the agent roster:</p>
+<table>
+<thead>
+<tr>
+<th>Agent ID</th>
+<th>Persona</th>
+<th>Primary Model</th>
+<th>Fallback Models</th>
+<th>Subagent Access</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>main</td>
+<td>柳含烟 (Serena)</td>
+<td>deepseek-v4-pro</td>
+<td>v4-flash, gpt-4o-mini</td>
+<td>coder, devops, tester, security, uxui, accountant</td>
+</tr>
+<tr>
+<td>coder</td>
+<td>沈漫歌</td>
+<td>deepseek-v4-pro</td>
+<td>v4-flash, gpt-4o-mini</td>
+<td>tester only</td>
+</tr>
+<tr>
+<td>devops</td>
+<td>苏清雅</td>
+<td>deepseek-v4-pro</td>
+<td>v4-flash, doubao-flash</td>
+<td>security, tester</td>
+</tr>
+<tr>
+<td>tester</td>
+<td>钟离燕</td>
+<td>deepseek-v4-pro</td>
+<td>v4-flash, gpt-4o-mini</td>
+<td>none</td>
+</tr>
+<tr>
+<td>security</td>
+<td>洛飞烟</td>
+<td>deepseek-v4-pro</td>
+<td>v4-flash</td>
+<td>none</td>
+</tr>
+<tr>
+<td>uxui</td>
+<td>楚灵儿</td>
+<td>deepseek-v4-pro</td>
+<td>v4-flash, gpt-4o-mini</td>
+<td>tester only</td>
+</tr>
+<tr>
+<td>accountant</td>
+<td>江惜月</td>
+<td>deepseek-v4-flash</td>
+<td>gpt-4o-mini</td>
+<td>none</td>
+</tr>
+</tbody></table>
+<p><strong>Model routing</strong> is configured via the <code>model.primary</code> and <code>model.fallbacks</code> fields. The accountant agent uses <code>deepseek-v4-flash</code> (cheaper, $0.14&#x2F;M input) instead of <code>deepseek-v4-pro</code> ($1.74&#x2F;M input), since its workload—token cost analysis and budget reports—does not require deep reasoning.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">// From openclaw.json — agent definitions</span><br><span class="line">&quot;agents&quot;: &#123;</span><br><span class="line">  &quot;defaults&quot;: &#123;</span><br><span class="line">    &quot;model&quot;: &#123;</span><br><span class="line">      &quot;primary&quot;: &quot;deepseek/deepseek-v4-pro&quot;,</span><br><span class="line">      &quot;fallbacks&quot;: [</span><br><span class="line">        &quot;deepseek/deepseek-v4-flash&quot;,</span><br><span class="line">        &quot;ollama/qwen2.5:1.5b&quot;</span><br><span class="line">      ]</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line">  &quot;list&quot;: [</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;id&quot;: &quot;main&quot;,</span><br><span class="line">      &quot;name&quot;: &quot;柳含烟&quot;,</span><br><span class="line">      &quot;subagents&quot;: &#123;</span><br><span class="line">        &quot;allowAgents&quot;: [</span><br><span class="line">          &quot;coder&quot;, &quot;devops&quot;, &quot;tester&quot;,</span><br><span class="line">          &quot;security&quot;, &quot;uxui&quot;, &quot;accountant&quot;</span><br><span class="line">        ]</span><br><span class="line">      &#125;,</span><br><span class="line">      &quot;tools&quot;: &#123;</span><br><span class="line">        &quot;elevated&quot;: &#123; &quot;enabled&quot;: true &#125;,</span><br><span class="line">        &quot;alsoAllow&quot;: [&quot;browser&quot;]</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="4-Delegation-Workflow"><a href="#4-Delegation-Workflow" class="headerlink" title="4. Delegation Workflow"></a>4. Delegation Workflow</h2><p>When a task arrives, Serena executes the following workflow:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">1. RECEIVE task (from Feishu, WebChat, or Cron)</span><br><span class="line">2. ANALYZE: What kind of task is this?</span><br><span class="line">   ├─ Code change → delegate to coder</span><br><span class="line">   ├─ Deploy/ops  → delegate to devops</span><br><span class="line">   ├─ Test/verify → delegate to tester</span><br><span class="line">   ├─ Security    → delegate to security</span><br><span class="line">   ├─ UI change   → delegate to uxui</span><br><span class="line">   └─ Cost/finance→ delegate to accountant</span><br><span class="line">3. DELEGATE with context, constraints, and expected output format</span><br><span class="line">4. REVIEW sub-agent&#x27;s output for quality, safety, and completeness</span><br><span class="line">5. VERIFY with tester or security if needed</span><br><span class="line">6. SUMMARIZE results and generate task report</span><br><span class="line">7. SAVE report to workspace/reports/</span><br><span class="line">8. END</span><br></pre></td></tr></table></figure>
+
+<p><strong>Critical rules enforced by Serena’s system prompt</strong>:</p>
+<blockquote>
+<p>“你拥有所有Agent的最高控制权、调度权、审核权与终止权。所有子Agent必须向你汇报结果。你必须审查子Agent输出质量、安全性与完整性。”</p>
+</blockquote>
+<p>This creates a <strong>hierarchical review chain</strong>: sub-agents never deploy to production without Serena’s sign-off.</p>
+<h2 id="5-Agent-to-Agent-A2A-Communication"><a href="#5-Agent-to-Agent-A2A-Communication" class="headerlink" title="5. Agent-to-Agent (A2A) Communication"></a>5. Agent-to-Agent (A2A) Communication</h2><p>OpenClaw’s <code>agentToAgent</code> feature enables direct inter-agent messaging through a dedicated bus:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">&quot;tools&quot;: &#123;</span><br><span class="line">  &quot;agentToAgent&quot;: &#123;</span><br><span class="line">    &quot;enabled&quot;: true,</span><br><span class="line">    &quot;allow&quot;: [</span><br><span class="line">      &quot;main&quot;, &quot;coder&quot;, &quot;devops&quot;,</span><br><span class="line">      &quot;uxui&quot;, &quot;accountant&quot;,</span><br><span class="line">      &quot;tester&quot;, &quot;security&quot;</span><br><span class="line">    ]</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>This allows, for example, the <strong>coder agent</strong> to request a security review from the <strong>security agent</strong> without going through the orchestrator for every sub-step. However, all final outputs must still pass Serena’s review gate.</p>
+<p><strong>Practical flow for a code change</strong>:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">User → Serena → coder (branches &amp; codes)</span><br><span class="line">                coder → tester (runs tests)</span><br><span class="line">                coder → security (audits diff)</span><br><span class="line">                coder ← Serena (review &amp; merge decision)</span><br><span class="line">User ← Serena (final result)</span><br></pre></td></tr></table></figure>
+
+<h2 id="6-Memory-System-Integration"><a href="#6-Memory-System-Integration" class="headerlink" title="6. Memory System Integration"></a>6. Memory System Integration</h2><p>Each agent has access to the shared memory-core system with dreaming enabled:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">&quot;plugins&quot;: &#123;</span><br><span class="line">  &quot;entries&quot;: &#123;</span><br><span class="line">    &quot;memory-core&quot;: &#123;</span><br><span class="line">      &quot;config&quot;: &#123; &quot;dreaming&quot;: &#123; &quot;enabled&quot;: true &#125; &#125;,</span><br><span class="line">      &quot;enabled&quot;: true</span><br><span class="line">    &#125;,</span><br><span class="line">    &quot;memory-wiki&quot;: &#123;</span><br><span class="line">      &quot;enabled&quot;: true,</span><br><span class="line">      &quot;config&quot;: &#123;</span><br><span class="line">        &quot;bridge&quot;: &#123;</span><br><span class="line">          &quot;enabled&quot;: true,</span><br><span class="line">          &quot;readMemoryArtifacts&quot;: true,</span><br><span class="line">          &quot;indexDreamReports&quot;: true,</span><br><span class="line">          &quot;indexDailyNotes&quot;: true,</span><br><span class="line">          &quot;indexMemoryRoot&quot;: true,</span><br><span class="line">          &quot;followMemoryEvents&quot;: true</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>The memory-wiki plugin bridges dreaming reports, daily notes, and memory artifacts into a searchable wiki. This allows any agent to recall past decisions, configurations, and troubleshooting steps across sessions.</p>
+<p><strong>Session memory</strong> captures the last 60 messages per session with LLM slugging for efficient retrieval. All agents share this context, enabling continuity across delegated tasks.</p>
+<h2 id="7-Cost-Optimization-—-The-Accountant-Agent"><a href="#7-Cost-Optimization-—-The-Accountant-Agent" class="headerlink" title="7. Cost Optimization — The Accountant Agent"></a>7. Cost Optimization — The Accountant Agent</h2><p>A standout pattern is the <strong>accountant agent</strong> (江惜月 &#x2F; Jiang Xiyue). Running on the cheaper <code>deepseek-v4-flash</code> model ($0.14&#x2F;$0.28 per M tokens vs $1.74&#x2F;$3.48 for v4-pro), it:</p>
+<ul>
+<li>Calculates per-task token costs across all agents</li>
+<li>Tracks monthly API spend by provider</li>
+<li>Generates cost reports saved to <code>workspace/reports/</code></li>
+<li>Recommends model downgrades when appropriate</li>
+</ul>
+<p>This agent runs on a <strong>nightly cron schedule</strong> (see Article #8) to produce daily cost summaries without user intervention.</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Cost comparison per agent (daily average)</span></span><br><span class="line"><span class="string">Agent</span>        <span class="string">Model</span>              <span class="string">Cost/task</span>    <span class="string">Daily</span> <span class="string">calls</span></span><br><span class="line"><span class="string">main</span>         <span class="string">deepseek-v4-pro</span>    <span class="string">~$0.35</span>       <span class="number">15</span><span class="number">-20</span></span><br><span class="line"><span class="string">coder</span>        <span class="string">deepseek-v4-pro</span>    <span class="string">~$0.42</span>       <span class="number">8</span><span class="number">-12</span></span><br><span class="line"><span class="string">devops</span>       <span class="string">deepseek-v4-pro</span>    <span class="string">~$0.28</span>       <span class="number">5</span><span class="number">-8</span></span><br><span class="line"><span class="string">tester</span>       <span class="string">deepseek-v4-pro</span>    <span class="string">~$0.18</span>       <span class="number">10</span><span class="number">-15</span></span><br><span class="line"><span class="string">security</span>     <span class="string">deepseek-v4-pro</span>    <span class="string">~$0.22</span>       <span class="number">3</span><span class="number">-5</span></span><br><span class="line"><span class="string">uxui</span>         <span class="string">deepseek-v4-pro</span>    <span class="string">~$0.15</span>       <span class="number">2</span><span class="number">-4</span></span><br><span class="line"><span class="string">accountant</span>   <span class="string">deepseek-v4-flash</span>  <span class="string">~$0.02</span>       <span class="number">1</span><span class="number">-2</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="8-Problems-Encountered-and-Solutions"><a href="#8-Problems-Encountered-and-Solutions" class="headerlink" title="8. Problems Encountered and Solutions"></a>8. Problems Encountered and Solutions</h2><h3 id="Problem-1-Agent-Context-Pollution"><a href="#Problem-1-Agent-Context-Pollution" class="headerlink" title="Problem 1: Agent Context Pollution"></a>Problem 1: Agent Context Pollution</h3><p><strong>Issue</strong>: When an agent completed a task and stored its output, subsequent agents in the delegation chain would see the previous agent’s working context, causing hallucinations (e.g., tester assuming coder’s branch was already merged).</p>
+<p><strong>Solution</strong>: We enforced strict session isolation via OpenClaw’s session management. Each delegated subtask gets a fresh sub-session that only imports the task specification and relevant memory, not the full parent session history.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">&quot;session&quot;: &#123;</span><br><span class="line">  &quot;dmScope&quot;: &quot;main&quot;,  // default routing to Serena</span><br><span class="line">  &quot;identityLinks&quot;: &#123;</span><br><span class="line">    &quot;serena-master&quot;: [</span><br><span class="line">      &quot;feishu:ou_d17525bc5f15e91da5122e5da836f771&quot;,</span><br><span class="line">      &quot;webchat:*&quot;,</span><br><span class="line">      &quot;node:c5afc2ae7bcb&quot;</span><br><span class="line">    ]</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Problem-2-Elevated-Tool-Overuse"><a href="#Problem-2-Elevated-Tool-Overuse" class="headerlink" title="Problem 2: Elevated Tool Overuse"></a>Problem 2: Elevated Tool Overuse</h3><p><strong>Issue</strong>: The <code>elevated</code> tool profile allowed agents to execute shell commands. The coder agent, when eager to test, would run <code>systemctl restart</code> or <code>apt upgrade</code> without review, risking production stability.</p>
+<p><strong>Solution</strong>: We restricted elevated access to Serena only:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">&quot;tools&quot;: &#123;</span><br><span class="line">  &quot;elevated&quot;: &#123;</span><br><span class="line">    &quot;enabled&quot;: true,</span><br><span class="line">    &quot;allowFrom&quot;: &#123;</span><br><span class="line">      &quot;webchat&quot;: [&quot;*:*:*&quot;],</span><br><span class="line">      &quot;feishu&quot;: [&quot;*:*:*&quot;]</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Sub-agents (coder, devops, etc.) do <strong>not</strong> have <code>elevated: true</code> in their agent definitions. Devops agent is further constrained with explicit scope rules:</p>
+<blockquote>
+<p>“只执行被明确指派的任务，禁止做任何超出任务范围的检查&#x2F;修改&#x2F;审计。”</p>
+</blockquote>
+<h3 id="Problem-3-Sub-Agent-Circular-Delegation"><a href="#Problem-3-Sub-Agent-Circular-Delegation" class="headerlink" title="Problem 3: Sub-Agent Circular Delegation"></a>Problem 3: Sub-Agent Circular Delegation</h3><p><strong>Issue</strong>: The devops agent, which can delegate to security and tester, would occasionally enter a delegation loop: devops → security → devops → tester → security → devops. This wasted tokens and confused the agents.</p>
+<p><strong>Solution</strong>: We enforced strict <strong>subagent allow lists</strong> per agent:</p>
+<ul>
+<li><code>main</code> → all agents</li>
+<li><code>coder</code> → tester only</li>
+<li><code>devops</code> → security, tester</li>
+<li><code>uxui</code> → tester only</li>
+<li>All others → none</li>
+</ul>
+<p>This creates a DAG (Directed Acyclic Graph) where no circular delegation is possible. Serena remains the only agent with full visibility.</p>
+<h3 id="Problem-4-N100-Resource-Contention"><a href="#Problem-4-N100-Resource-Contention" class="headerlink" title="Problem 4: N100 Resource Contention"></a>Problem 4: N100 Resource Contention</h3><p><strong>Issue</strong>: Running 7 agents simultaneously on an Intel N100 (4 cores, 6W TDP) with local Ollama models caused CPU thrashing. The <code>qwen2.5:1.5b</code> fallback model, while cheap, competed for resources with the main gateway process.</p>
+<p><strong>Solution</strong>: We moved local Ollama models to a secondary fallback tier and configured agent concurrency limits:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">&quot;agents&quot;: &#123;</span><br><span class="line">  &quot;defaults&quot;: &#123;</span><br><span class="line">    &quot;heartbeat&quot;: &#123;</span><br><span class="line">      &quot;ackMaxChars&quot;: 0  // disable heartbeat for local models</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>All primary agent traffic routes through remote API providers (DeepSeek, OpenAI, Volcengine). Local Ollama is used only as a last-resort fallback when all remote APIs are unreachable.</p>
+<h2 id="9-Memory-and-Reports-Directory-Structure"><a href="#9-Memory-and-Reports-Directory-Structure" class="headerlink" title="9. Memory and Reports Directory Structure"></a>9. Memory and Reports Directory Structure</h2><p>All agents persist their work to a shared workspace:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">~/.openclaw/workspace/</span><br><span class="line">├── reports/</span><br><span class="line">│   ├── coder/       # Code change reports</span><br><span class="line">│   ├── devops/      # Deployment/ops reports</span><br><span class="line">│   ├── tester/      # Test reports</span><br><span class="line">│   ├── security/    # Security audit reports</span><br><span class="line">│   ├── uxui/        # Design change reports</span><br><span class="line">│   ├── accountant/  # Cost analysis reports</span><br><span class="line">│   └── main/        # Orchestration summaries</span><br><span class="line">├── memory/</span><br><span class="line">│   └── dreaming/</span><br><span class="line">│       ├── light/   # Daily dream logs</span><br><span class="line">│       └── deep/    # Consolidated insights</span><br><span class="line">└── assets/          # Shared media and screenshots</span><br></pre></td></tr></table></figure>
+
+<p>This structure enables Serena to cross-reference reports across agents and generate unified daily summaries.</p>
+<h2 id="10-Summary"><a href="#10-Summary" class="headerlink" title="10. Summary"></a>10. Summary</h2><p>The OpenClaw multi-agent architecture on HanyanOS demonstrates a production-grade pattern for hierarchical AI agent orchestration:</p>
+<ul>
+<li><strong>7 specialized agents</strong> with distinct personae, tools, and model assignments</li>
+<li><strong>Hierarchical delegation</strong> with Serena as the single review gate</li>
+<li><strong>DAG-based subagent permissions</strong> preventing circular delegation</li>
+<li><strong>Cost-aware routing</strong> (accountant on flash model, others on pro)</li>
+<li><strong>Persistent memory and reporting</strong> for auditability and continuity</li>
+<li><strong>N100-appropriate resource management</strong> favoring remote APIs over local compute</li>
+</ul>
+<p>Total operational cost: approximately <strong>$8-12&#x2F;day</strong> across all agents, with nightly accountant reports keeping spend visible and optimized.</p>
+<hr>
+<p><em>Next in series: #7 — Layered Memory Architecture — Dreaming, Wiki Bridge, and Session Persistence</em></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Michael Chen
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://www.chenyun.org/2026/05/25/2026-05-25-hanyan-infra-6/" title="HanyanOS 部署手记">https://www.chenyun.org/2026/05/25/2026-05-25-hanyan-infra-6/</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/DevOps/" rel="tag"># DevOps</a>
+              <a href="/tags/HanyanOS/" rel="tag"># HanyanOS</a>
+              <a href="/tags/Infrastructure/" rel="tag"># Infrastructure</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/05/25/2026-05-25-hanyan-infra-5/" rel="prev" title="HanyanOS 部署手记">
+                  <i class="fa fa-angle-left"></i> HanyanOS 部署手记
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2022 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Michael Chen</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>

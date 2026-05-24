@@ -3194,4 +3194,161 @@
         <tag>Infrastructure</tag>
       </tags>
   </entry>
+  <entry>
+    <title>HanyanOS 部署手记</title>
+    <url>/2026/05/25/2026-05-25-hanyan-infra-6/</url>
+    <content><![CDATA[<h2 id="1-Overview"><a href="#1-Overview" class="headerlink" title="1. Overview"></a>1. Overview</h2><p>Modern AI workloads demand more than a single monolithic chat model. In HanyanOS, we run <strong>7 specialized OpenClaw agents</strong> on an Intel N100 mini-server, each with distinct roles, model profiles, and operational constraints. The orchestrator agent—Serena (柳含烟)—holds supreme command and routes, reviews, and audits every task across the agent mesh.</p>
+<p>This post dissects the architecture: agent topology, delegation workflow, model assignment strategies, subagent permission gates, and the hard-won lessons from running this multi-agent assembly in production on a 4-core&#x2F;6W Intel N100.</p>
+<span id="more"></span>
+
+<h2 id="2-Architecture-Overview"><a href="#2-Architecture-Overview" class="headerlink" title="2. Architecture Overview"></a>2. Architecture Overview</h2><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">┌──────────────────────────────────────────────────┐</span><br><span class="line">│                  Gateway (OpenClaw)               │</span><br><span class="line">│  Port 18789 · Tailscale · Feishu · WebChat       │</span><br><span class="line">├──────────────────────────────────────────────────┤</span><br><span class="line">│                                                    │</span><br><span class="line">│   ╔══════════════════ Serena (main) ═══════════╗  │</span><br><span class="line">│   ║  Orchestrator  ·  Decision Router          ║  │</span><br><span class="line">│   ║  Model: deepseek-v4-pro + fallbacks        ║  │</span><br><span class="line">│   ║  Tools: elevated + browser                 ║  │</span><br><span class="line">│   ╚════════════════════════════════════════════╝  │</span><br><span class="line">│         │           │         │          │         │</span><br><span class="line">│    ┌────┴──┐  ┌─────┴──┐ ┌──┴─────┐ ┌──┴─────┐  │</span><br><span class="line">│    │ Coder │  │ Devops │ │Tester  │ │Security│  │</span><br><span class="line">│    │漫歌   │  │清雅    │ │钟离燕  │ │洛飞烟  │  │</span><br><span class="line">│    └───┬───┘  └───┬────┘ └───┬────┘ └───┬────┘  │</span><br><span class="line">│        │          │          │           │        │</span><br><span class="line">│    ┌───┴────┐ ┌──┴───────┐  │           │        │</span><br><span class="line">│    │Accountant│ │  UX/UI   │  │           │        │</span><br><span class="line">│    │ 江惜月  │ │ 楚灵儿   │  │           │        │</span><br><span class="line">│    └────────┘ └──────────┘  │           │        │</span><br><span class="line">│                              └───────────┘        │</span><br><span class="line">│              Agent-to-Agent (A2A) Bus             │</span><br><span class="line">└──────────────────────────────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<p><strong>Key design principle</strong>: All external input enters through Serena. Sub-agents never communicate with external channels directly. This creates a single point of control for security auditing, cost tracking, and quality review.</p>
+<h2 id="3-Agent-Definitions-and-Model-Assignments"><a href="#3-Agent-Definitions-and-Model-Assignments" class="headerlink" title="3. Agent Definitions and Model Assignments"></a>3. Agent Definitions and Model Assignments</h2><p>Each agent has a unique <code>systemPromptOverride</code> that defines its persona, workflow rules, and constraints. Here is the agent roster:</p>
+<table>
+<thead>
+<tr>
+<th>Agent ID</th>
+<th>Persona</th>
+<th>Primary Model</th>
+<th>Fallback Models</th>
+<th>Subagent Access</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>main</td>
+<td>柳含烟 (Serena)</td>
+<td>deepseek-v4-pro</td>
+<td>v4-flash, gpt-4o-mini</td>
+<td>coder, devops, tester, security, uxui, accountant</td>
+</tr>
+<tr>
+<td>coder</td>
+<td>沈漫歌</td>
+<td>deepseek-v4-pro</td>
+<td>v4-flash, gpt-4o-mini</td>
+<td>tester only</td>
+</tr>
+<tr>
+<td>devops</td>
+<td>苏清雅</td>
+<td>deepseek-v4-pro</td>
+<td>v4-flash, doubao-flash</td>
+<td>security, tester</td>
+</tr>
+<tr>
+<td>tester</td>
+<td>钟离燕</td>
+<td>deepseek-v4-pro</td>
+<td>v4-flash, gpt-4o-mini</td>
+<td>none</td>
+</tr>
+<tr>
+<td>security</td>
+<td>洛飞烟</td>
+<td>deepseek-v4-pro</td>
+<td>v4-flash</td>
+<td>none</td>
+</tr>
+<tr>
+<td>uxui</td>
+<td>楚灵儿</td>
+<td>deepseek-v4-pro</td>
+<td>v4-flash, gpt-4o-mini</td>
+<td>tester only</td>
+</tr>
+<tr>
+<td>accountant</td>
+<td>江惜月</td>
+<td>deepseek-v4-flash</td>
+<td>gpt-4o-mini</td>
+<td>none</td>
+</tr>
+</tbody></table>
+<p><strong>Model routing</strong> is configured via the <code>model.primary</code> and <code>model.fallbacks</code> fields. The accountant agent uses <code>deepseek-v4-flash</code> (cheaper, $0.14&#x2F;M input) instead of <code>deepseek-v4-pro</code> ($1.74&#x2F;M input), since its workload—token cost analysis and budget reports—does not require deep reasoning.</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">// From openclaw.json — agent definitions</span><br><span class="line">&quot;agents&quot;: &#123;</span><br><span class="line">  &quot;defaults&quot;: &#123;</span><br><span class="line">    &quot;model&quot;: &#123;</span><br><span class="line">      &quot;primary&quot;: &quot;deepseek/deepseek-v4-pro&quot;,</span><br><span class="line">      &quot;fallbacks&quot;: [</span><br><span class="line">        &quot;deepseek/deepseek-v4-flash&quot;,</span><br><span class="line">        &quot;ollama/qwen2.5:1.5b&quot;</span><br><span class="line">      ]</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;,</span><br><span class="line">  &quot;list&quot;: [</span><br><span class="line">    &#123;</span><br><span class="line">      &quot;id&quot;: &quot;main&quot;,</span><br><span class="line">      &quot;name&quot;: &quot;柳含烟&quot;,</span><br><span class="line">      &quot;subagents&quot;: &#123;</span><br><span class="line">        &quot;allowAgents&quot;: [</span><br><span class="line">          &quot;coder&quot;, &quot;devops&quot;, &quot;tester&quot;,</span><br><span class="line">          &quot;security&quot;, &quot;uxui&quot;, &quot;accountant&quot;</span><br><span class="line">        ]</span><br><span class="line">      &#125;,</span><br><span class="line">      &quot;tools&quot;: &#123;</span><br><span class="line">        &quot;elevated&quot;: &#123; &quot;enabled&quot;: true &#125;,</span><br><span class="line">        &quot;alsoAllow&quot;: [&quot;browser&quot;]</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  ]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="4-Delegation-Workflow"><a href="#4-Delegation-Workflow" class="headerlink" title="4. Delegation Workflow"></a>4. Delegation Workflow</h2><p>When a task arrives, Serena executes the following workflow:</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">1. RECEIVE task (from Feishu, WebChat, or Cron)</span><br><span class="line">2. ANALYZE: What kind of task is this?</span><br><span class="line">   ├─ Code change → delegate to coder</span><br><span class="line">   ├─ Deploy/ops  → delegate to devops</span><br><span class="line">   ├─ Test/verify → delegate to tester</span><br><span class="line">   ├─ Security    → delegate to security</span><br><span class="line">   ├─ UI change   → delegate to uxui</span><br><span class="line">   └─ Cost/finance→ delegate to accountant</span><br><span class="line">3. DELEGATE with context, constraints, and expected output format</span><br><span class="line">4. REVIEW sub-agent&#x27;s output for quality, safety, and completeness</span><br><span class="line">5. VERIFY with tester or security if needed</span><br><span class="line">6. SUMMARIZE results and generate task report</span><br><span class="line">7. SAVE report to workspace/reports/</span><br><span class="line">8. END</span><br></pre></td></tr></table></figure>
+
+<p><strong>Critical rules enforced by Serena’s system prompt</strong>:</p>
+<blockquote>
+<p>“你拥有所有Agent的最高控制权、调度权、审核权与终止权。所有子Agent必须向你汇报结果。你必须审查子Agent输出质量、安全性与完整性。”</p>
+</blockquote>
+<p>This creates a <strong>hierarchical review chain</strong>: sub-agents never deploy to production without Serena’s sign-off.</p>
+<h2 id="5-Agent-to-Agent-A2A-Communication"><a href="#5-Agent-to-Agent-A2A-Communication" class="headerlink" title="5. Agent-to-Agent (A2A) Communication"></a>5. Agent-to-Agent (A2A) Communication</h2><p>OpenClaw’s <code>agentToAgent</code> feature enables direct inter-agent messaging through a dedicated bus:</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">&quot;tools&quot;: &#123;</span><br><span class="line">  &quot;agentToAgent&quot;: &#123;</span><br><span class="line">    &quot;enabled&quot;: true,</span><br><span class="line">    &quot;allow&quot;: [</span><br><span class="line">      &quot;main&quot;, &quot;coder&quot;, &quot;devops&quot;,</span><br><span class="line">      &quot;uxui&quot;, &quot;accountant&quot;,</span><br><span class="line">      &quot;tester&quot;, &quot;security&quot;</span><br><span class="line">    ]</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>This allows, for example, the <strong>coder agent</strong> to request a security review from the <strong>security agent</strong> without going through the orchestrator for every sub-step. However, all final outputs must still pass Serena’s review gate.</p>
+<p><strong>Practical flow for a code change</strong>:</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">User → Serena → coder (branches &amp; codes)</span><br><span class="line">                coder → tester (runs tests)</span><br><span class="line">                coder → security (audits diff)</span><br><span class="line">                coder ← Serena (review &amp; merge decision)</span><br><span class="line">User ← Serena (final result)</span><br></pre></td></tr></table></figure>
+
+<h2 id="6-Memory-System-Integration"><a href="#6-Memory-System-Integration" class="headerlink" title="6. Memory System Integration"></a>6. Memory System Integration</h2><p>Each agent has access to the shared memory-core system with dreaming enabled:</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">&quot;plugins&quot;: &#123;</span><br><span class="line">  &quot;entries&quot;: &#123;</span><br><span class="line">    &quot;memory-core&quot;: &#123;</span><br><span class="line">      &quot;config&quot;: &#123; &quot;dreaming&quot;: &#123; &quot;enabled&quot;: true &#125; &#125;,</span><br><span class="line">      &quot;enabled&quot;: true</span><br><span class="line">    &#125;,</span><br><span class="line">    &quot;memory-wiki&quot;: &#123;</span><br><span class="line">      &quot;enabled&quot;: true,</span><br><span class="line">      &quot;config&quot;: &#123;</span><br><span class="line">        &quot;bridge&quot;: &#123;</span><br><span class="line">          &quot;enabled&quot;: true,</span><br><span class="line">          &quot;readMemoryArtifacts&quot;: true,</span><br><span class="line">          &quot;indexDreamReports&quot;: true,</span><br><span class="line">          &quot;indexDailyNotes&quot;: true,</span><br><span class="line">          &quot;indexMemoryRoot&quot;: true,</span><br><span class="line">          &quot;followMemoryEvents&quot;: true</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>The memory-wiki plugin bridges dreaming reports, daily notes, and memory artifacts into a searchable wiki. This allows any agent to recall past decisions, configurations, and troubleshooting steps across sessions.</p>
+<p><strong>Session memory</strong> captures the last 60 messages per session with LLM slugging for efficient retrieval. All agents share this context, enabling continuity across delegated tasks.</p>
+<h2 id="7-Cost-Optimization-—-The-Accountant-Agent"><a href="#7-Cost-Optimization-—-The-Accountant-Agent" class="headerlink" title="7. Cost Optimization — The Accountant Agent"></a>7. Cost Optimization — The Accountant Agent</h2><p>A standout pattern is the <strong>accountant agent</strong> (江惜月 &#x2F; Jiang Xiyue). Running on the cheaper <code>deepseek-v4-flash</code> model ($0.14&#x2F;$0.28 per M tokens vs $1.74&#x2F;$3.48 for v4-pro), it:</p>
+<ul>
+<li>Calculates per-task token costs across all agents</li>
+<li>Tracks monthly API spend by provider</li>
+<li>Generates cost reports saved to <code>workspace/reports/</code></li>
+<li>Recommends model downgrades when appropriate</li>
+</ul>
+<p>This agent runs on a <strong>nightly cron schedule</strong> (see Article #8) to produce daily cost summaries without user intervention.</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># Cost comparison per agent (daily average)</span></span><br><span class="line"><span class="string">Agent</span>        <span class="string">Model</span>              <span class="string">Cost/task</span>    <span class="string">Daily</span> <span class="string">calls</span></span><br><span class="line"><span class="string">main</span>         <span class="string">deepseek-v4-pro</span>    <span class="string">~$0.35</span>       <span class="number">15</span><span class="number">-20</span></span><br><span class="line"><span class="string">coder</span>        <span class="string">deepseek-v4-pro</span>    <span class="string">~$0.42</span>       <span class="number">8</span><span class="number">-12</span></span><br><span class="line"><span class="string">devops</span>       <span class="string">deepseek-v4-pro</span>    <span class="string">~$0.28</span>       <span class="number">5</span><span class="number">-8</span></span><br><span class="line"><span class="string">tester</span>       <span class="string">deepseek-v4-pro</span>    <span class="string">~$0.18</span>       <span class="number">10</span><span class="number">-15</span></span><br><span class="line"><span class="string">security</span>     <span class="string">deepseek-v4-pro</span>    <span class="string">~$0.22</span>       <span class="number">3</span><span class="number">-5</span></span><br><span class="line"><span class="string">uxui</span>         <span class="string">deepseek-v4-pro</span>    <span class="string">~$0.15</span>       <span class="number">2</span><span class="number">-4</span></span><br><span class="line"><span class="string">accountant</span>   <span class="string">deepseek-v4-flash</span>  <span class="string">~$0.02</span>       <span class="number">1</span><span class="number">-2</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="8-Problems-Encountered-and-Solutions"><a href="#8-Problems-Encountered-and-Solutions" class="headerlink" title="8. Problems Encountered and Solutions"></a>8. Problems Encountered and Solutions</h2><h3 id="Problem-1-Agent-Context-Pollution"><a href="#Problem-1-Agent-Context-Pollution" class="headerlink" title="Problem 1: Agent Context Pollution"></a>Problem 1: Agent Context Pollution</h3><p><strong>Issue</strong>: When an agent completed a task and stored its output, subsequent agents in the delegation chain would see the previous agent’s working context, causing hallucinations (e.g., tester assuming coder’s branch was already merged).</p>
+<p><strong>Solution</strong>: We enforced strict session isolation via OpenClaw’s session management. Each delegated subtask gets a fresh sub-session that only imports the task specification and relevant memory, not the full parent session history.</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">&quot;session&quot;: &#123;</span><br><span class="line">  &quot;dmScope&quot;: &quot;main&quot;,  // default routing to Serena</span><br><span class="line">  &quot;identityLinks&quot;: &#123;</span><br><span class="line">    &quot;serena-master&quot;: [</span><br><span class="line">      &quot;feishu:ou_d17525bc5f15e91da5122e5da836f771&quot;,</span><br><span class="line">      &quot;webchat:*&quot;,</span><br><span class="line">      &quot;node:c5afc2ae7bcb&quot;</span><br><span class="line">    ]</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Problem-2-Elevated-Tool-Overuse"><a href="#Problem-2-Elevated-Tool-Overuse" class="headerlink" title="Problem 2: Elevated Tool Overuse"></a>Problem 2: Elevated Tool Overuse</h3><p><strong>Issue</strong>: The <code>elevated</code> tool profile allowed agents to execute shell commands. The coder agent, when eager to test, would run <code>systemctl restart</code> or <code>apt upgrade</code> without review, risking production stability.</p>
+<p><strong>Solution</strong>: We restricted elevated access to Serena only:</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">&quot;tools&quot;: &#123;</span><br><span class="line">  &quot;elevated&quot;: &#123;</span><br><span class="line">    &quot;enabled&quot;: true,</span><br><span class="line">    &quot;allowFrom&quot;: &#123;</span><br><span class="line">      &quot;webchat&quot;: [&quot;*:*:*&quot;],</span><br><span class="line">      &quot;feishu&quot;: [&quot;*:*:*&quot;]</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Sub-agents (coder, devops, etc.) do <strong>not</strong> have <code>elevated: true</code> in their agent definitions. Devops agent is further constrained with explicit scope rules:</p>
+<blockquote>
+<p>“只执行被明确指派的任务，禁止做任何超出任务范围的检查&#x2F;修改&#x2F;审计。”</p>
+</blockquote>
+<h3 id="Problem-3-Sub-Agent-Circular-Delegation"><a href="#Problem-3-Sub-Agent-Circular-Delegation" class="headerlink" title="Problem 3: Sub-Agent Circular Delegation"></a>Problem 3: Sub-Agent Circular Delegation</h3><p><strong>Issue</strong>: The devops agent, which can delegate to security and tester, would occasionally enter a delegation loop: devops → security → devops → tester → security → devops. This wasted tokens and confused the agents.</p>
+<p><strong>Solution</strong>: We enforced strict <strong>subagent allow lists</strong> per agent:</p>
+<ul>
+<li><code>main</code> → all agents</li>
+<li><code>coder</code> → tester only</li>
+<li><code>devops</code> → security, tester</li>
+<li><code>uxui</code> → tester only</li>
+<li>All others → none</li>
+</ul>
+<p>This creates a DAG (Directed Acyclic Graph) where no circular delegation is possible. Serena remains the only agent with full visibility.</p>
+<h3 id="Problem-4-N100-Resource-Contention"><a href="#Problem-4-N100-Resource-Contention" class="headerlink" title="Problem 4: N100 Resource Contention"></a>Problem 4: N100 Resource Contention</h3><p><strong>Issue</strong>: Running 7 agents simultaneously on an Intel N100 (4 cores, 6W TDP) with local Ollama models caused CPU thrashing. The <code>qwen2.5:1.5b</code> fallback model, while cheap, competed for resources with the main gateway process.</p>
+<p><strong>Solution</strong>: We moved local Ollama models to a secondary fallback tier and configured agent concurrency limits:</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">&quot;agents&quot;: &#123;</span><br><span class="line">  &quot;defaults&quot;: &#123;</span><br><span class="line">    &quot;heartbeat&quot;: &#123;</span><br><span class="line">      &quot;ackMaxChars&quot;: 0  // disable heartbeat for local models</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>All primary agent traffic routes through remote API providers (DeepSeek, OpenAI, Volcengine). Local Ollama is used only as a last-resort fallback when all remote APIs are unreachable.</p>
+<h2 id="9-Memory-and-Reports-Directory-Structure"><a href="#9-Memory-and-Reports-Directory-Structure" class="headerlink" title="9. Memory and Reports Directory Structure"></a>9. Memory and Reports Directory Structure</h2><p>All agents persist their work to a shared workspace:</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">~/.openclaw/workspace/</span><br><span class="line">├── reports/</span><br><span class="line">│   ├── coder/       # Code change reports</span><br><span class="line">│   ├── devops/      # Deployment/ops reports</span><br><span class="line">│   ├── tester/      # Test reports</span><br><span class="line">│   ├── security/    # Security audit reports</span><br><span class="line">│   ├── uxui/        # Design change reports</span><br><span class="line">│   ├── accountant/  # Cost analysis reports</span><br><span class="line">│   └── main/        # Orchestration summaries</span><br><span class="line">├── memory/</span><br><span class="line">│   └── dreaming/</span><br><span class="line">│       ├── light/   # Daily dream logs</span><br><span class="line">│       └── deep/    # Consolidated insights</span><br><span class="line">└── assets/          # Shared media and screenshots</span><br></pre></td></tr></table></figure>
+
+<p>This structure enables Serena to cross-reference reports across agents and generate unified daily summaries.</p>
+<h2 id="10-Summary"><a href="#10-Summary" class="headerlink" title="10. Summary"></a>10. Summary</h2><p>The OpenClaw multi-agent architecture on HanyanOS demonstrates a production-grade pattern for hierarchical AI agent orchestration:</p>
+<ul>
+<li><strong>7 specialized agents</strong> with distinct personae, tools, and model assignments</li>
+<li><strong>Hierarchical delegation</strong> with Serena as the single review gate</li>
+<li><strong>DAG-based subagent permissions</strong> preventing circular delegation</li>
+<li><strong>Cost-aware routing</strong> (accountant on flash model, others on pro)</li>
+<li><strong>Persistent memory and reporting</strong> for auditability and continuity</li>
+<li><strong>N100-appropriate resource management</strong> favoring remote APIs over local compute</li>
+</ul>
+<p>Total operational cost: approximately <strong>$8-12&#x2F;day</strong> across all agents, with nightly accountant reports keeping spend visible and optimized.</p>
+<hr>
+<p><em>Next in series: #7 — Layered Memory Architecture — Dreaming, Wiki Bridge, and Session Persistence</em></p>
+]]></content>
+      <categories>
+        <category>tech</category>
+      </categories>
+      <tags>
+        <tag>DevOps</tag>
+        <tag>HanyanOS</tag>
+        <tag>Infrastructure</tag>
+      </tags>
+  </entry>
 </search>
