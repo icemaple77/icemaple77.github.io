@@ -3008,4 +3008,190 @@
         <tag>Dream</tag>
       </tags>
   </entry>
+  <entry>
+    <title>HanyanOS 部署手记</title>
+    <url>/2026/05/25/2026-05-25-hanyan-infra-5/</url>
+    <content><![CDATA[<h2 id="1-Introduction"><a href="#1-Introduction" class="headerlink" title="1. Introduction"></a>1. Introduction</h2><p>A self-hosted blog is the public face of any infrastructure project. For HanyanOS, the blog at <code>blog.chenyun.org</code> serves as both the project’s documentation portal and a real-world proving ground for Dockerized PHP applications behind an FRP tunnel. Deploying WordPress on a NAT’d N100 presents unique challenges: the database must be container-local, the PHP stack must handle FRP-induced latency gracefully, and the entire pipeline from VPS edge to Docker container must be transparent to visitors.</p>
+<p>This post documents the complete <strong>WordPress + MariaDB</strong> deployment on the N100, covering Docker Compose orchestration, Nginx reverse proxy configuration, FRP tunnel integration, static asset optimization, and operational lessons from running a PHP application through a three-hop network path.</p>
+<hr>
+<h2 id="2-Architecture-Overview"><a href="#2-Architecture-Overview" class="headerlink" title="2. Architecture Overview"></a>2. Architecture Overview</h2><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">┌─ Internet ──────────────────────────────────────────────┐</span><br><span class="line">│  blog.chenyun.org → CNAME → Lightsail 52.220.247.252   │</span><br><span class="line">└────────────────────────┬────────────────────────────────┘</span><br><span class="line">                         │ :443 (HTTPS terminated at VPS)</span><br><span class="line">┌─ Lightsail VPS (SG) ──┴─────────────────────────────────┐</span><br><span class="line">│  Nginx SNI: blog.chenyun.org                            │</span><br><span class="line">│  SSL: Let&#x27;s Encrypt (acme.sh + Route53 DNS-01)          │</span><br><span class="line">│  proxy_pass → 127.0.0.1:7444  (FRP tunnel endpoint)     │</span><br><span class="line">└────────────────────────┬────────────────────────────────┘</span><br><span class="line">                         │ :7444 (TCP tunnel, plain HTTP)</span><br><span class="line">┌─ FRP Tunnel ───────────┴─────────────────────────────────┐</span><br><span class="line">│  frps(Lightsail:7444) ←→ frpc(N100)                     │</span><br><span class="line">│  TCP tunnel, tcp_mux enabled, no encryption (local net)  │</span><br><span class="line">└────────────────────────┬────────────────────────────────┘</span><br><span class="line">                         │ :80</span><br><span class="line">┌─ N100 Nginx ───────────┴─────────────────────────────────┐</span><br><span class="line">│  server_name blog.chenyun.org;                            │</span><br><span class="line">│  proxy_pass http://127.0.0.1:8081;                       │</span><br><span class="line">│  X-Forwarded-Proto: https (from VPS)                     │</span><br><span class="line">└────────────────────────┬────────────────────────────────┘</span><br><span class="line">                         │ :8081</span><br><span class="line">┌─ Docker serena-net ────┴─────────────────────────────────┐</span><br><span class="line">│                                                          │</span><br><span class="line">│  ┌──────────────┐      ┌──────────────┐                  │</span><br><span class="line">│  │  serena-wp   │      │  serena-db   │                  │</span><br><span class="line">│  │ WordPress    │─────▶│  MariaDB     │                  │</span><br><span class="line">│  │ 6.7 PHP 8.3  │      │  10.11       │                  │</span><br><span class="line">│  │ :8081→:80    │      │  :3306       │                  │</span><br><span class="line">│  └──────────────┘      └──────────────┘                  │</span><br><span class="line">│        │                       │                         │</span><br><span class="line">│  /home/michael/         /home/michael/                   │</span><br><span class="line">│  www/wordpress          data/mysql-data                  │</span><br><span class="line">│  (bind mount)           (bind mount)                     │</span><br><span class="line">│                                                          │</span><br><span class="line">│  ┌──────────────┐                                        │</span><br><span class="line">│  │ serena-adminer│  db.chenyun.org                       │</span><br><span class="line">│  │ Adminer :8082 │  (database UI)                        │</span><br><span class="line">│  └──────────────┘                                        │</span><br><span class="line">└──────────────────────────────────────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<h3 id="Traffic-Flow"><a href="#Traffic-Flow" class="headerlink" title="Traffic Flow"></a>Traffic Flow</h3><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Visitor → blog.chenyun.org</span><br><span class="line">  → DNS → Lightsail (52.220.247.252)</span><br><span class="line">    → Nginx (SSL termination, SNI routing)</span><br><span class="line">      → FRP tunnel (port 7444)</span><br><span class="line">        → N100 nginx (Host-based routing)</span><br><span class="line">          → Docker serena-wp:8081 (Apache PHP)</span><br><span class="line">            → Docker serena-db:3306 (MariaDB)</span><br></pre></td></tr></table></figure>
+
+<p>The round-trip latency from Singapore to Brisbane (~90ms) is absorbed by WordPress’s page cache and Nginx’s micro-caching for static assets.</p>
+<hr>
+<h2 id="3-Docker-Compose-Deployment"><a href="#3-Docker-Compose-Deployment" class="headerlink" title="3. Docker Compose Deployment"></a>3. Docker Compose Deployment</h2><p>The blog stack lives in a shared Compose file alongside other HanyanOS services, all on the <code>serena-net</code> bridge network:</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="comment"># /home/michael/infra/docker/docker-compose.yml (excerpt)</span></span><br><span class="line"><span class="attr">services:</span></span><br><span class="line">  <span class="attr">serena-wp:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">wordpress:6.7-php8.3-apache</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">serena-wp</span></span><br><span class="line">    <span class="attr">restart:</span> <span class="string">unless-stopped</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;127.0.0.1:8081:80&quot;</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="attr">WORDPRESS_DB_HOST:</span> <span class="string">serena-db</span></span><br><span class="line">      <span class="attr">WORDPRESS_DB_NAME:</span> <span class="string">wordpress</span></span><br><span class="line">      <span class="attr">WORDPRESS_DB_USER:</span> <span class="string">michael</span></span><br><span class="line">      <span class="attr">WORDPRESS_DB_PASSWORD:</span> <span class="string">$&#123;WP_DB_PASSWORD&#125;</span></span><br><span class="line">    <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">/home/michael/www/wordpress:/var/www/html</span></span><br><span class="line">    <span class="attr">depends_on:</span></span><br><span class="line">      <span class="attr">serena-db:</span></span><br><span class="line">        <span class="attr">condition:</span> <span class="string">service_healthy</span></span><br><span class="line"></span><br><span class="line">  <span class="attr">serena-db:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">mariadb:10.11</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">wordpress</span></span><br><span class="line">    <span class="attr">restart:</span> <span class="string">unless-stopped</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="attr">MARIADB_ROOT_PASSWORD:</span> <span class="string">$&#123;MARIADB_ROOT_PW&#125;</span></span><br><span class="line">      <span class="attr">MARIADB_DATABASE:</span> <span class="string">wordpress</span></span><br><span class="line">      <span class="attr">MARIADB_USER:</span> <span class="string">michael</span></span><br><span class="line">      <span class="attr">MARIADB_PASSWORD:</span> <span class="string">$&#123;WP_DB_PASSWORD&#125;</span></span><br><span class="line">    <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">/home/michael/data/mysql-data:/var/lib/mysql</span></span><br><span class="line">    <span class="attr">healthcheck:</span></span><br><span class="line">      <span class="attr">test:</span> [<span class="string">&quot;CMD&quot;</span>, <span class="string">&quot;healthcheck.sh&quot;</span>, <span class="string">&quot;--connect&quot;</span>, <span class="string">&quot;--innodb_initialized&quot;</span>]</span><br><span class="line">      <span class="attr">interval:</span> <span class="string">10s</span></span><br><span class="line">      <span class="attr">retries:</span> <span class="number">5</span></span><br><span class="line"></span><br><span class="line">  <span class="attr">serena-adminer:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">adminer:latest</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">serena-adminer</span></span><br><span class="line">    <span class="attr">restart:</span> <span class="string">unless-stopped</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;127.0.0.1:8082:8080&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="attr">networks:</span></span><br><span class="line">  <span class="attr">default:</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">serena-net</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="Key-Design-Decisions"><a href="#Key-Design-Decisions" class="headerlink" title="Key Design Decisions"></a>Key Design Decisions</h3><table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>MariaDB over MySQL</strong></td>
+<td>Lighter memory footprint on N100 (80MB vs 180MB idle); drop-in replacement; same query interface</td>
+</tr>
+<tr>
+<td><strong>Bind mount for wp-content</strong></td>
+<td>Direct file access for theme&#x2F;plugin development, backup simplicity, and git integration</td>
+</tr>
+<tr>
+<td><strong>Health check dependency</strong></td>
+<td>Prevents WordPress starting before MariaDB is ready to accept connections</td>
+</tr>
+<tr>
+<td><strong>127.0.0.1 port binding</strong></td>
+<td>WordPress is never directly exposed — all traffic goes through Nginx for unified logging and security headers</td>
+</tr>
+<tr>
+<td><strong>Environment variables</strong></td>
+<td>Docker secrets&#x2F;prevent credential drift; <code>.env</code> file managed by HanyanOS vault</td>
+</tr>
+</tbody></table>
+<h3 id="Database-Connection"><a href="#Database-Connection" class="headerlink" title="Database Connection"></a>Database Connection</h3><p>WordPress connects to MariaDB via Docker’s embedded DNS. The service name <code>serena-db</code> resolves to the container’s IP on <code>serena-net</code>. The <code>wp-config.php</code> auto-generated by the WordPress entrypoint:</p>
+<figure class="highlight php"><table><tr><td class="code"><pre><span class="line"><span class="title function_ invoke__">define</span>(<span class="string">&#x27;DB_NAME&#x27;</span>, <span class="string">&#x27;wordpress&#x27;</span>);</span><br><span class="line"><span class="title function_ invoke__">define</span>(<span class="string">&#x27;DB_USER&#x27;</span>, <span class="string">&#x27;michael&#x27;</span>);</span><br><span class="line"><span class="title function_ invoke__">define</span>(<span class="string">&#x27;DB_PASSWORD&#x27;</span>, <span class="string">&#x27;Phoenix19820301@&#x27;</span>);</span><br><span class="line"><span class="title function_ invoke__">define</span>(<span class="string">&#x27;DB_HOST&#x27;</span>, <span class="string">&#x27;serena-db&#x27;</span>);</span><br></pre></td></tr></table></figure>
+
+<p>The <code>FORCE_SSL_LOGIN</code> constant is set to <code>true</code> to ensure all admin authentication happens over HTTPS, even though SSL termination occurs at the VPS:</p>
+<figure class="highlight php"><table><tr><td class="code"><pre><span class="line"><span class="title function_ invoke__">define</span>(<span class="string">&#x27;FORCE_SSL_LOGIN&#x27;</span>, <span class="literal">true</span>);</span><br></pre></td></tr></table></figure>
+
+<p>The HTTPS detection is handled by the X-Forwarded-Proto header injected by the N100 Nginx:</p>
+<figure class="highlight php"><table><tr><td class="code"><pre><span class="line"><span class="keyword">if</span> (<span class="keyword">isset</span>(<span class="variable">$_SERVER</span>[<span class="string">&#x27;HTTP_X_FORWARDED_PROTO&#x27;</span>])</span><br><span class="line">    &amp;&amp; <span class="title function_ invoke__">strpos</span>(<span class="variable">$_SERVER</span>[<span class="string">&#x27;HTTP_X_FORWARDED_PROTO&#x27;</span>],<span class="string">&#x27;https&#x27;</span>) !== <span class="literal">false</span>) &#123;</span><br><span class="line">    <span class="variable">$_SERVER</span>[<span class="string">&#x27;HTTPS&#x27;</span>]=<span class="string">&#x27;on&#x27;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="4-Nginx-Reverse-Proxy-Configuration"><a href="#4-Nginx-Reverse-Proxy-Configuration" class="headerlink" title="4. Nginx Reverse Proxy Configuration"></a>4. Nginx Reverse Proxy Configuration</h2><p>The N100 Nginx acts as the traffic dispatcher, routing by <code>Host</code> header to the appropriate backend. The blog-specific block:</p>
+<figure class="highlight nginx"><table><tr><td class="code"><pre><span class="line"><span class="comment"># /etc/nginx/sites-available/chenyun-proxy</span></span><br><span class="line"><span class="section">server</span> &#123;</span><br><span class="line">    <span class="attribute">listen</span> <span class="number">80</span>;</span><br><span class="line">    <span class="attribute">server_name</span> blog.chenyun.org;</span><br><span class="line"></span><br><span class="line">    <span class="section">location</span> / &#123;</span><br><span class="line">        <span class="attribute">proxy_pass</span> http://127.0.0.1:8081;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> Host <span class="variable">$host</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Real-IP <span class="variable">$remote_addr</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Forwarded-For <span class="variable">$proxy_add_x_forwarded_for</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Forwarded-Proto https;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Note that <code>X-Forwarded-Proto</code> is hardcoded to <code>https</code> — this is correct because HTTPS termination happens on the Lightsail VPS before traffic enters the FRP tunnel. Without this, WordPress would generate <code>http://</code> URLs for all assets and redirect loops would occur on login.</p>
+<h3 id="Static-Asset-Acceleration"><a href="#Static-Asset-Acceleration" class="headerlink" title="Static Asset Acceleration"></a>Static Asset Acceleration</h3><p>A separate location block caches immutable assets for 7 days, reducing FRP tunnel bandwidth usage:</p>
+<figure class="highlight nginx"><table><tr><td class="code"><pre><span class="line"><span class="section">location</span> <span class="regexp">~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$</span> &#123;</span><br><span class="line">    <span class="attribute">proxy_pass</span> http://127.0.0.1:8081;</span><br><span class="line">    <span class="attribute">proxy_set_header</span> Host <span class="variable">$host</span>;</span><br><span class="line">    <span class="attribute">proxy_set_header</span> X-Real-IP <span class="variable">$remote_addr</span>;</span><br><span class="line">    <span class="attribute">proxy_set_header</span> X-Forwarded-For <span class="variable">$proxy_add_x_forwarded_for</span>;</span><br><span class="line">    <span class="attribute">proxy_set_header</span> X-Forwarded-Proto https;</span><br><span class="line">    <span class="attribute">expires</span> <span class="number">7d</span>;</span><br><span class="line">    <span class="attribute">add_header</span> Cache-Control <span class="string">&quot;public, immutable&quot;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="5-FRP-Tunnel-Integration"><a href="#5-FRP-Tunnel-Integration" class="headerlink" title="5. FRP Tunnel Integration"></a>5. FRP Tunnel Integration</h2><p>The blog is accessed through a TCP tunnel that forwards all HTTP traffic from the Lightsail VPS to the N100:</p>
+<figure class="highlight ini"><table><tr><td class="code"><pre><span class="line"><span class="comment"># /etc/frp/frpc.ini (N100 side)</span></span><br><span class="line"><span class="section">[common]</span></span><br><span class="line"><span class="attr">server_addr</span> = <span class="number">52.220</span>.<span class="number">247.252</span></span><br><span class="line"><span class="attr">server_port</span> = <span class="number">7443</span></span><br><span class="line"><span class="attr">token</span> = chenyun-frp-<span class="number">2026</span></span><br><span class="line"><span class="attr">tcp_mux</span> = <span class="literal">true</span></span><br><span class="line"><span class="attr">login_fail_exit</span> = <span class="literal">false</span></span><br><span class="line"></span><br><span class="line"><span class="section">[nginx]</span></span><br><span class="line"><span class="attr">type</span> = tcp</span><br><span class="line"><span class="attr">local_ip</span> = <span class="number">127.0</span>.<span class="number">0.1</span></span><br><span class="line"><span class="attr">local_port</span> = <span class="number">80</span></span><br><span class="line"><span class="attr">remote_port</span> = <span class="number">7444</span></span><br></pre></td></tr></table></figure>
+
+<p>On the VPS side, Nginx receives HTTPS traffic on <code>blog.chenyun.org</code>, terminates SSL, and proxies to the FRP tunnel endpoint:</p>
+<figure class="highlight nginx"><table><tr><td class="code"><pre><span class="line"><span class="comment"># Lightsail VPS Nginx (simplified)</span></span><br><span class="line"><span class="section">server</span> &#123;</span><br><span class="line">    <span class="attribute">listen</span> <span class="number">443</span> ssl http2;</span><br><span class="line">    <span class="attribute">server_name</span> blog.chenyun.org;</span><br><span class="line"></span><br><span class="line">    <span class="attribute">ssl_certificate</span> /etc/letsencrypt/live/chenyun.org/fullchain.pem;</span><br><span class="line">    <span class="attribute">ssl_certificate_key</span> /etc/letsencrypt/live/chenyun.org/privkey.pem;</span><br><span class="line"></span><br><span class="line">    <span class="section">location</span> / &#123;</span><br><span class="line">        <span class="attribute">proxy_pass</span> http://127.0.0.1:7444;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> Host blog.chenyun.org;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Real-IP <span class="variable">$remote_addr</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Forwarded-For <span class="variable">$proxy_add_x_forwarded_for</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Forwarded-Proto https;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>The complete path: <strong>Internet → VPS:443 (SSL) → VPS:7444 (FRP) → N100:80 (Nginx) → N100:8081 (Docker WordPress)</strong>.</p>
+<hr>
+<h2 id="6-Problems-Encountered-and-Resolutions"><a href="#6-Problems-Encountered-and-Resolutions" class="headerlink" title="6. Problems Encountered and Resolutions"></a>6. Problems Encountered and Resolutions</h2><h3 id="6-1-X-Forwarded-Proto-Redirect-Loop"><a href="#6-1-X-Forwarded-Proto-Redirect-Loop" class="headerlink" title="6.1 X-Forwarded-Proto Redirect Loop"></a>6.1 X-Forwarded-Proto Redirect Loop</h3><p><strong>Symptom:</strong> After initial deployment, accessing <code>https://blog.chenyun.org/wp-admin/</code> caused an infinite redirect loop (<code>https→http→https→http</code>).</p>
+<p><strong>Root Cause:</strong> WordPress’s <code>FORCE_SSL_LOGIN</code> and <code>FORCE_SSL_ADMIN</code> redirect to <code>https://</code>, but without a correct <code>X-Forwarded-Proto</code> header, WordPress thought the request was plain HTTP and kept redirecting.</p>
+<p><strong>Resolution:</strong> Three fixes applied in combination:</p>
+<ol>
+<li>Added <code>proxy_set_header X-Forwarded-Proto https;</code> to the N100 Nginx blog location block (hardcoded, since SSL terminates at VPS)</li>
+<li>Added the <code>$_SERVER[&#39;HTTPS&#39;]=&#39;on&#39;</code> override in <code>wp-config.php</code> based on the forwarded header</li>
+<li>Set <code>define(&#39;FORCE_SSL_LOGIN&#39;, true);</code> in <code>wp-config.php</code></li>
+</ol>
+<h3 id="6-2-MariaDB-Container-Name-Collision"><a href="#6-2-MariaDB-Container-Name-Collision" class="headerlink" title="6.2 MariaDB Container Name Collision"></a>6.2 MariaDB Container Name Collision</h3><p><strong>Symptom:</strong> After a system reboot, the MariaDB container failed to start because a stale MySQL 8.0 container (<code>hanyan-db</code>) had already bound port 3306 on the Docker network.</p>
+<p><strong>Root Cause:</strong> The HanyanOS agent database (<code>hanyan-db</code>, MySQL 8.0) and the blog database (<code>serena-db</code>, MariaDB 10.11) both expose port 3306 internally. Docker allows multiple containers on the same bridge network as long as port 3306 isn’t published to the host — but on container restart, the health check for <code>serena-db</code> timed out because it couldn’t initialize InnoDB.</p>
+<p><strong>Resolution:</strong> Ensured both containers are on the same Docker network (<code>serena-net</code>) and rely on Docker’s internal DNS (service name resolution) rather than port conflicts. The <code>hanyan-db</code> exposes 3306 only on host port 3307, leaving no port conflict.</p>
+<h3 id="6-3-Plugin-Auto-Update-Failures-Behind-FRP"><a href="#6-3-Plugin-Auto-Update-Failures-Behind-FRP" class="headerlink" title="6.3 Plugin Auto-Update Failures Behind FRP"></a>6.3 Plugin Auto-Update Failures Behind FRP</h3><p><strong>Symptom:</strong> WordPress plugin and theme auto-updates consistently failed with <code>cURL error 28: Connection timed out</code> or <code>cURL error 7: Failed to connect</code>.</p>
+<p><strong>Root Cause:</strong> WordPress’s update mechanism makes outbound HTTP connections to <code>api.wordpress.org</code>, <code>downloads.wordpress.org</code>, and <code>ps.w.org</code>. From the N100 behind NAT, these connections exit through the home ISP and are subject to inconsistent routing and DNS resolution.</p>
+<p><strong>Resolution:</strong> Two mitigations:</p>
+<ol>
+<li><strong>Increased PHP timeout</strong>: Added <code>define(&#39;WP_HTTP_BLOCK_EXTERNAL&#39;, false);</code> and ensured the PHP <code>max_execution_time</code> is set to 300s in the container</li>
+<li><strong>Manual update workflow</strong>: All major updates are performed via <code>docker exec serena-wp wp-cli ...</code> using WP-CLI, which has better error handling. For automated minor updates, added a cron entry:</li>
+</ol>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># /etc/cron.d/wordpress-updates</span></span><br><span class="line">0 3 * * 1 michael docker <span class="built_in">exec</span> serena-wp wp plugin update --all --quiet</span><br><span class="line">0 3 * * 1 michael docker <span class="built_in">exec</span> serena-wp wp theme update --all --quiet</span><br><span class="line">0 4 * * 1 michael docker <span class="built_in">exec</span> serena-wp wp core update --minor --quiet</span><br></pre></td></tr></table></figure>
+
+<h3 id="6-4-MySQL-Memory-Pressure-on-N100"><a href="#6-4-MySQL-Memory-Pressure-on-N100" class="headerlink" title="6.4 MySQL Memory Pressure on N100"></a>6.4 MySQL Memory Pressure on N100</h3><p><strong>Symptom:</strong> After running for 3-4 days, the N100’s 8GB RAM was nearly exhausted, with MariaDB consuming 1.2GB.</p>
+<p><strong>Root Cause:</strong> MariaDB’s default <code>innodb_buffer_pool_size</code> is set to 80% of available memory on Docker (per the official image’s auto-configuration script). On an 8GB system running multiple containers (Stalwart, Qdrant, MySQL 8.0), this caused OOM kills.</p>
+<p><strong>Resolution:</strong> Capped InnoDB buffer pool to 256MB via a custom MariaDB configuration mounted into the container:</p>
+<figure class="highlight ini"><table><tr><td class="code"><pre><span class="line"><span class="comment"># /home/michael/data/mysql-data/my.cnf</span></span><br><span class="line"><span class="section">[mysqld]</span></span><br><span class="line"><span class="attr">innodb_buffer_pool_size</span> = <span class="number">256</span>M</span><br><span class="line"><span class="attr">innodb_log_file_size</span> = <span class="number">64</span>M</span><br><span class="line"><span class="attr">max_connections</span> = <span class="number">50</span></span><br><span class="line"><span class="attr">query_cache_type</span> = <span class="number">0</span></span><br><span class="line"><span class="attr">performance_schema</span> = <span class="literal">OFF</span></span><br></pre></td></tr></table></figure>
+
+<p>Applied by bind-mounting into the container:</p>
+<figure class="highlight yaml"><table><tr><td class="code"><pre><span class="line"><span class="attr">services:</span></span><br><span class="line">  <span class="attr">serena-db:</span></span><br><span class="line">    <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">/home/michael/data/mysql-data:/var/lib/mysql</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">/home/michael/data/mysql-data/my.cnf:/etc/mysql/conf.d/my.cnf:ro</span></span><br></pre></td></tr></table></figure>
+
+<p>This reduced MariaDB’s idle memory from 1.2GB to ~180MB.</p>
+<h3 id="6-5-Health-Check-Race-Condition"><a href="#6-5-Health-Check-Race-Condition" class="headerlink" title="6.5 Health Check Race Condition"></a>6.5 Health Check Race Condition</h3><p><strong>Symptom:</strong> On <code>docker compose up</code>, WordPress occasionally started before MariaDB’s health check passed, resulting in <code>Error establishing a database connection</code>.</p>
+<p><strong>Root Cause:</strong> Docker Compose’s <code>depends_on</code> with <code>condition: service_healthy</code> is evaluated once at startup. If MariaDB’s health check takes longer than expected (cold start with InnoDB recovery), Compose proceeds before the DB is truly ready.</p>
+<p><strong>Resolution:</strong> Added a <code>restart: unless-stopped</code> policy and set MariaDB’s health check <code>start_period</code> to 30 seconds to account for cold-start InnoDB initialization. WordPress will crash-loop until MariaDB passes health — typically 2-3 restarts (about 15 seconds).</p>
+<hr>
+<h2 id="7-Security-Posture"><a href="#7-Security-Posture" class="headerlink" title="7. Security Posture"></a>7. Security Posture</h2><table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Measure</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Transport</strong></td>
+<td>TLS 1.3 terminated at VPS; FRP tunnel carries plain HTTP over VPC</td>
+</tr>
+<tr>
+<td><strong>Database isolation</strong></td>
+<td>MariaDB not exposed on any host port; only accessible via Docker network DNS</td>
+</tr>
+<tr>
+<td><strong>Admin access</strong></td>
+<td><code>wp-admin</code> forced HTTPS via <code>FORCE_SSL_LOGIN</code>; Adminer at <code>db.chenyun.org</code> requires HTTP Basic Auth in Nginx</td>
+</tr>
+<tr>
+<td><strong>File permissions</strong></td>
+<td>WordPress files in <code>/home/michael/www/wordpress</code> owned by <code>www-data:www-data</code> inside container; host user <code>michael</code> has group access</td>
+</tr>
+<tr>
+<td><strong>Backups</strong></td>
+<td>Daily <code>wp db export</code> via cron; MySQL data directory included in HanyanOS nightly rsync</td>
+</tr>
+<tr>
+<td><strong>Rate limiting</strong></td>
+<td>Fail2ban watches WordPress login attempts on N100 (<code>/var/log/nginx/blog-access.log</code>)</td>
+</tr>
+<tr>
+<td><strong>Plugin hygiene</strong></td>
+<td>Only 5 plugins installed (Akismet, Jetpack, WP Super Cache, Yoast SEO, UpdraftPlus) — minimized attack surface</td>
+</tr>
+</tbody></table>
+<hr>
+<h2 id="8-Performance-Observations"><a href="#8-Performance-Observations" class="headerlink" title="8. Performance Observations"></a>8. Performance Observations</h2><table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Page load time (cached, Australia)</td>
+<td>~1.2s (includes 90ms VPS→N100 tunnel latency)</td>
+</tr>
+<tr>
+<td>Page load time (cached, US East)</td>
+<td>~2.4s (additional trans-Pacific latency)</td>
+</tr>
+<tr>
+<td>MariaDB idle memory</td>
+<td>180 MB</td>
+</tr>
+<tr>
+<td>WordPress PHP-FPM idle memory</td>
+<td>85 MB</td>
+</tr>
+<tr>
+<td>FRP tunnel throughput</td>
+<td>~45 Mbps (N100 gigabit Ethernet)</td>
+</tr>
+<tr>
+<td>Concurrent connections</td>
+<td>10-15 (typical for personal blog with bot traffic)</td>
+</tr>
+</tbody></table>
+<p>The WP Super Cache plugin generates static HTML files that bypass PHP entirely for unauthenticated visitors, reducing the average request to a single Nginx <code>try_files</code> lookup.</p>
+<hr>
+<h2 id="9-Conclusion"><a href="#9-Conclusion" class="headerlink" title="9. Conclusion"></a>9. Conclusion</h2><p>Deploying WordPress behind an FRP tunnel on NAT’d hardware is not the simplest path — but it is a resilient one. The three-hop architecture (VPS → FRP → N100 → Docker) adds complexity but provides valuable isolation: WordPress never sees the public internet directly, the database is not exposed, and the entire stack can be torn down and rebuilt from Compose without touching external configuration. For a personal blog serving a few thousand monthly visitors, the performance penalty is negligible, and the operational flexibility is considerable.</p>
+<p><strong>Key takeaway:</strong> The hardest part of a tunneled WordPress deployment is not the infrastructure — it’s the HTTPS detection and header forwarding. Get <code>X-Forwarded-Proto</code> right, and everything else follows.</p>
+<p><strong>Next in series:</strong> OpenClaw Multi-Agent Scheduling — Orchestrating 7 Agents on N100.</p>
+]]></content>
+      <categories>
+        <category>tech</category>
+      </categories>
+      <tags>
+        <tag>DevOps</tag>
+        <tag>HanyanOS</tag>
+        <tag>Infrastructure</tag>
+      </tags>
+  </entry>
 </search>
