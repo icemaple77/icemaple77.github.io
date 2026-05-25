@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"www.chenyun.org","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":true,"style":"flat"},"fold":{"enable":false,"height":500},"language":false,"border_radius":8},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false,"trigger":"auto"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="1. OverviewMemory is the substrate of autonomy. In a multi-agent system running on an Intel N100 (4 cores, 6W TDP) with limited RAM and strict token budgets, memory design is not an abstraction proble">
+<meta property="og:type" content="article">
+<meta property="og:title" content="HanyanOS 部署手记">
+<meta property="og:url" content="https://www.chenyun.org/2026/05/25/2026-05-25-hanyan-infra-7/index.html">
+<meta property="og:site_name" content="望舒">
+<meta property="og:description" content="1. OverviewMemory is the substrate of autonomy. In a multi-agent system running on an Intel N100 (4 cores, 6W TDP) with limited RAM and strict token budgets, memory design is not an abstraction proble">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-05-25T01:01:00.000Z">
+<meta property="article:modified_time" content="2026-05-25T01:02:30.033Z">
+<meta property="article:author" content="Michael Chen">
+<meta property="article:tag" content="DevOps">
+<meta property="article:tag" content="HanyanOS">
+<meta property="article:tag" content="Infrastructure">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://www.chenyun.org/2026/05/25/2026-05-25-hanyan-infra-7/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://www.chenyun.org/2026/05/25/2026-05-25-hanyan-infra-7/","path":"2026/05/25/2026-05-25-hanyan-infra-7/","title":"HanyanOS 部署手记"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>HanyanOS 部署手记 | 望舒</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">望舒</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">人的一生注定会遇到两个人一个惊艳了时光，一个温柔了岁月</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-Overview"><span class="nav-number">1.</span> <span class="nav-text">1. Overview</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-Architecture-Overview"><span class="nav-number">2.</span> <span class="nav-text">2. Architecture Overview</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-The-Memory-Router-%E2%80%94-MEMORY-md-as-a-Filesystem"><span class="nav-number">3.</span> <span class="nav-text">3. The Memory Router — MEMORY.md as a Filesystem</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-Trust-Level-System-%E2%80%94-Preventing-Hallucination-Contamination"><span class="nav-number">4.</span> <span class="nav-text">4. Trust-Level System — Preventing Hallucination Contamination</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-The-Dreaming-Pipeline-%E2%80%94-Three-Stage-Consolidation"><span class="nav-number">5.</span> <span class="nav-text">5. The Dreaming Pipeline — Three-Stage Consolidation</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Stage-1-Light-Sleep-30KB-day-output"><span class="nav-number">5.1.</span> <span class="nav-text">Stage 1: Light Sleep (30KB&#x2F;day output)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Stage-2-REM-Sleep-2-5KB-day-output"><span class="nav-number">5.2.</span> <span class="nav-text">Stage 2: REM Sleep (2.5KB&#x2F;day output)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Stage-3-Deep-Sleep-155B-day-output"><span class="nav-number">5.3.</span> <span class="nav-text">Stage 3: Deep Sleep (155B&#x2F;day output)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Dreaming-configuration-OpenClaw-plugins"><span class="nav-number">5.4.</span> <span class="nav-text">Dreaming configuration (OpenClaw plugins):</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-Agent-Workspace-Isolation-v3-0"><span class="nav-number">6.</span> <span class="nav-text">6. Agent Workspace Isolation (v3.0)</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-Problems-Encountered-and-Solutions"><span class="nav-number">7.</span> <span class="nav-text">7. Problems Encountered and Solutions</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Problem-1-Memory-Bloat-%E2%80%94-182-Files-60MB-Raw-Text"><span class="nav-number">7.1.</span> <span class="nav-text">Problem 1: Memory Bloat — 182 Files, 60MB+ Raw Text</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Problem-2-Session-Amnesia-%E2%80%94-Daily-4AM-Reset"><span class="nav-number">7.2.</span> <span class="nav-text">Problem 2: Session Amnesia — Daily 4AM Reset</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Problem-3-Dream-Candidate-Quality-%E2%80%94-High-Noise-Low-Signal"><span class="nav-number">7.3.</span> <span class="nav-text">Problem 3: Dream Candidate Quality — High Noise, Low Signal</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Problem-4-Anchor-Dead-Links"><span class="nav-number">7.4.</span> <span class="nav-text">Problem 4: Anchor Dead Links</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-File-Distribution-and-Storage"><span class="nav-number">8.</span> <span class="nav-text">8. File Distribution and Storage</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9-Summary"><span class="nav-number">9.</span> <span class="nav-text">9. Summary</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Michael Chen"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">Michael Chen</p>
+  <div class="site-description" itemprop="description">Michael Chen 的技术博客，关注 AI、云计算、软件工程和科技趋势</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">24</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">52</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/michaelchen" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;michaelchen" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://linkedin.com/in/icemaple77" title="LinkedIn → https:&#x2F;&#x2F;linkedin.com&#x2F;in&#x2F;icemaple77" rel="noopener me" target="_blank"><i class="fab fa-linkedin fa-fw"></i>LinkedIn</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://ai.chenyun.org/" title="AI → https:&#x2F;&#x2F;ai.chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-robot fa-fw"></i>AI</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.chenyun.org/" title="Blog → https:&#x2F;&#x2F;blog.chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-blog fa-fw"></i>Blog</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:michael@chenyun.org" title="Email → mailto:michael@chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-envelope fa-fw"></i>Email</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.chenyun.org/2026/05/25/2026-05-25-hanyan-infra-7/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="Michael Chen">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="望舒">
+      <meta itemprop="description" content="Michael Chen 的技术博客，关注 AI、云计算、软件工程和科技趋势">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="HanyanOS 部署手记 | 望舒">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          HanyanOS 部署手记
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-05-25 11:01:00" itemprop="dateCreated datePublished" datetime="2026-05-25T11:01:00+10:00">2026-05-25</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/tech/" itemprop="url" rel="index"><span itemprop="name">tech</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="1-Overview"><a href="#1-Overview" class="headerlink" title="1. Overview"></a>1. Overview</h2><p>Memory is the substrate of autonomy. In a multi-agent system running on an Intel N100 (4 cores, 6W TDP) with limited RAM and strict token budgets, memory design is not an abstraction problem — it is a <strong>resource allocation problem</strong>. Every token spent loading irrelevant context is a token not spent on reasoning.</p>
+<p>HanyanOS implements a <strong>four-layer hierarchical memory architecture</strong> inspired by human sleep consolidation: a permanent long-term layer (facts, rules, identity), a working session layer (conversation context), a dreaming layer (offline consolidation and extraction), and agent-specific workspaces. A <strong>memory router</strong> (MEMORY.md) serves as the entry point, while a <strong>trust-level system</strong> prevents hallucination contamination.</p>
+<p>This post dissects the architecture, the anchor-based retrieval system, the dreaming pipeline, and the production lessons from running this on a resource-constrained N100.</p>
+<span id="more"></span>
+
+<h2 id="2-Architecture-Overview"><a href="#2-Architecture-Overview" class="headerlink" title="2. Architecture Overview"></a>2. Architecture Overview</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">┌─────────────────────────────────────────────────────────────┐</span><br><span class="line">│                   MEMORY.md (Memory Router)                  │</span><br><span class="line">│  Top-level index only — &lt; 150 lines, anchors only           │</span><br><span class="line">├─────────────────────────────────────────────────────────────┤</span><br><span class="line">│                                                              │</span><br><span class="line">│   LAYER 1: LONG-TERM  (Permanent, verified facts only)       │</span><br><span class="line">│   ┌─────────────────────────────────────────────────────────┐│</span><br><span class="line">│   │ memory/infrastructure/  ← network, DNS, nginx, security ││</span><br><span class="line">│   │ memory/user/            ←公子 preferences, profile      ││</span><br><span class="line">│   │ memory/projects/        ← active project state          ││</span><br><span class="line">│   │ SOUL.md                 ←人格 (immutable, highest tier) ││</span><br><span class="line">│   │ HanyanOS/rules/         ← governance, 20+ rule files    ││</span><br><span class="line">│   │ HanyanOS/knowledge/     ← learned knowledge             ││</span><br><span class="line">│   └─────────────────────────────────────────────────────────┘│</span><br><span class="line">│                                                              │</span><br><span class="line">│   LAYER 2: WORKING   (Session-scoped, ephemeral)             │</span><br><span class="line">│   ┌─────────────────────────────────────────────────────────┐│</span><br><span class="line">│   │ Session buffer (last 60 messages, LLM-slugged)          ││</span><br><span class="line">│   │ memory/summaries/  ← compressed session summaries       ││</span><br><span class="line">│   │ memory/cache/      ← task-scoped temporary data         ││</span><br><span class="line">│   └─────────────────────────────────────────────────────────┘│</span><br><span class="line">│                                                              │</span><br><span class="line">│   LAYER 3: DREAMING  (Subconscious, offline processing)      │</span><br><span class="line">│   ┌─────────────────────────────────────────────────────────┐│</span><br><span class="line">│   │ dreaming/light/  ← candidate extraction (~30KB/day)     ││</span><br><span class="line">│   │ dreaming/deep/   ← pattern ranking &amp; promotion (155B)   ││</span><br><span class="line">│   │ dreaming/rem/    ← rapid-eye-movement reflection (~2.5K)││</span><br><span class="line">│   └─────────────────────────────────────────────────────────┘│</span><br><span class="line">│                                                              │</span><br><span class="line">│   LAYER 4: AGENT WS  (Per-agent autonomous memory)           │</span><br><span class="line">│   ┌─────────────────────────────────────────────────────────┐│</span><br><span class="line">│   │ workspace/coder/memory/    ←沈漫歌&#x27;s knowledge          ││</span><br><span class="line">│   │ workspace/devops/memory/   ←苏清雅&#x27;s config history     ││</span><br><span class="line">│   │ workspace/tester/memory/   ←钟离燕&#x27;s test fixtures      ││</span><br><span class="line">│   │ workspace/...              ← each agent self-manages    ││</span><br><span class="line">│   └─────────────────────────────────────────────────────────┘│</span><br><span class="line">│                                                              │</span><br><span class="line">└─────────────────────────────────────────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<p><strong>Key design principle</strong>: Memory is a <strong>router</strong>, not a dump. MEMORY.md contains only anchors — one-liner pointers with paths. All detailed content lives in sub-files, loaded on-demand.</p>
+<h2 id="3-The-Memory-Router-—-MEMORY-md-as-a-Filesystem"><a href="#3-The-Memory-Router-—-MEMORY-md-as-a-Filesystem" class="headerlink" title="3. The Memory Router — MEMORY.md as a Filesystem"></a>3. The Memory Router — MEMORY.md as a Filesystem</h2><p>MEMORY.md is strictly constrained to <strong>&lt; 150 lines</strong>. It stores only:</p>
+<figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">## [基础设施]</span></span><br><span class="line"><span class="bullet">-</span> 🧷 [network] → memory/infrastructure/network/README.md</span><br><span class="line"><span class="bullet">-</span> 🧷 [nginx]  → memory/infrastructure/nginx/README.md</span><br><span class="line"><span class="bullet">-</span> 🧷 [dns]    → memory/infrastructure/dns/README.md</span><br><span class="line"></span><br><span class="line"><span class="section">## [活跃项目]</span></span><br><span class="line"><span class="bullet">-</span> 🧷 Dashboard重构 → HanyanOS/tasks/active/dashboard-refactor.md</span><br></pre></td></tr></table></figure>
+
+<p>Each anchor carries a <strong>type tag</strong> (<code>[infra]</code>, <code>[project]</code>, <code>[task]</code>, <code>[user]</code>, <code>[rule]</code>) and a file path. The retrieval flow:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">公子 request → 含烟 parses keywords</span><br><span class="line">  → MEMORY.md anchor lookup (fast path, zero I/O)</span><br><span class="line">  → Hit? → memory_get() on target file</span><br><span class="line">  → Miss? → memory_search() semantic retrieval across all layers</span><br><span class="line">  → Inject only relevant context (HOT/WARM/COLD tiers)</span><br><span class="line">  → Execute task</span><br></pre></td></tr></table></figure>
+
+<p><strong>Memory tiers by access recency:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Condition</th>
+<th>Inject Strategy</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>HOT</td>
+<td>Active task &#x2F; last 3 days</td>
+<td>Always inject</td>
+</tr>
+<tr>
+<td>WARM</td>
+<td>Last 7 days &#x2F; active project</td>
+<td>On-demand</td>
+</tr>
+<tr>
+<td>COLD</td>
+<td>7–30 days</td>
+<td>Only on search hit</td>
+</tr>
+<tr>
+<td>FROZEN</td>
+<td>&gt; 30 days</td>
+<td>Archived, never auto-load</td>
+</tr>
+</tbody></table>
+<p>This <strong>tiered injection</strong> alone reduced average context size by ~62% compared to the naive approach of loading all memory files.</p>
+<h2 id="4-Trust-Level-System-—-Preventing-Hallucination-Contamination"><a href="#4-Trust-Level-System-—-Preventing-Hallucination-Contamination" class="headerlink" title="4. Trust-Level System — Preventing Hallucination Contamination"></a>4. Trust-Level System — Preventing Hallucination Contamination</h2><p>Every memory record carries a metadata section:</p>
+<figure class="highlight json"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="punctuation">&#123;</span></span><br><span class="line">  <span class="attr">&quot;source&quot;</span><span class="punctuation">:</span> <span class="string">&quot;user_direct | agent_inferred | external_search | dream_output&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;trust_level&quot;</span><span class="punctuation">:</span> <span class="string">&quot;verified | inferred | temporary | conflict&quot;</span><span class="punctuation">,</span></span><br><span class="line">  <span class="attr">&quot;updated_at&quot;</span><span class="punctuation">:</span> <span class="string">&quot;2026-05-25T01:00:00+00:00&quot;</span></span><br><span class="line"><span class="punctuation">&#125;</span></span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th>Level</th>
+<th align="center">Can Write Long-Term?</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>verified</code></td>
+<td align="center">✅ Yes</td>
+<td>“公子的 491 visa was granted 2026-04-02”</td>
+</tr>
+<tr>
+<td><code>inferred</code></td>
+<td align="center">❌ Suggest only</td>
+<td>“Weekly API cost ≈ $60 based on 7-day trend”</td>
+</tr>
+<tr>
+<td><code>temporary</code></td>
+<td align="center">❌ Cache only</td>
+<td>“Current task: Nginx config for dashboard”</td>
+</tr>
+<tr>
+<td><code>conflict</code></td>
+<td align="center">❌ Resolve first</td>
+<td>Two contradicting port assignments</td>
+</tr>
+</tbody></table>
+<p><strong>Critical rule</strong>: Dream output can never write directly to long-term memory. The pipeline is:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Dream output → 含烟 review → Summaries → 公子 approval → Long-term</span><br></pre></td></tr></table></figure>
+
+<p>This prevents the most common cause of personality drift in persistent AI systems: the agent hallucinating during offline reasoning and then treating that hallucination as fact.</p>
+<h2 id="5-The-Dreaming-Pipeline-—-Three-Stage-Consolidation"><a href="#5-The-Dreaming-Pipeline-—-Three-Stage-Consolidation" class="headerlink" title="5. The Dreaming Pipeline — Three-Stage Consolidation"></a>5. The Dreaming Pipeline — Three-Stage Consolidation</h2><p>Every night at 03:00 AEST (via cron, see Article #8), the system runs a <strong>dream cycle</strong> across three stages:</p>
+<h3 id="Stage-1-Light-Sleep-30KB-day-output"><a href="#Stage-1-Light-Sleep-30KB-day-output" class="headerlink" title="Stage 1: Light Sleep (30KB&#x2F;day output)"></a>Stage 1: Light Sleep (30KB&#x2F;day output)</h3><p>Scans recent session transcripts and identifies <strong>candidate memories</strong> — patterns, decisions, and facts that appeared with sufficient frequency or emotional salience:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">- Candidate: 🧠 [security] session_ref; confidence=0.62</span><br><span class="line">- Candidate: 核心事件: 491签证下签 2026-04-02</span><br><span class="line">- Candidate: 系统修复: Session失忆根因 → 每日4AM重置</span><br></pre></td></tr></table></figure>
+
+<p>Each candidate carries a <strong>confidence score</strong>, evidence trace (which session + line), and a status (<code>staged | promoted | discarded</code>).</p>
+<h3 id="Stage-2-REM-Sleep-2-5KB-day-output"><a href="#Stage-2-REM-Sleep-2-5KB-day-output" class="headerlink" title="Stage 2: REM Sleep (2.5KB&#x2F;day output)"></a>Stage 2: REM Sleep (2.5KB&#x2F;day output)</h3><p>Cross-links candidates from multiple sessions and attempts <strong>pattern recognition</strong>:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">### Possible Lasting Truths</span><br><span class="line">- 🧠 [security][emotion] cross-session consistency, confidence=0.75</span><br><span class="line">- 「GPT-SoVITS voice training completed on ASUS WSL2」</span><br></pre></td></tr></table></figure>
+
+<h3 id="Stage-3-Deep-Sleep-155B-day-output"><a href="#Stage-3-Deep-Sleep-155B-day-output" class="headerlink" title="Stage 3: Deep Sleep (155B&#x2F;day output)"></a>Stage 3: Deep Sleep (155B&#x2F;day output)</h3><p>Ranks all staged candidates and decides which, if any, should be <strong>promoted to long-term</strong>:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># Deep Sleep</span><br><span class="line">- Repaired recall artifacts: rewrote recall store.</span><br><span class="line">- Ranked 10 candidate(s) for durable promotion.</span><br><span class="line">- Promoted 0 candidate(s) into MEMORY.md.</span><br></pre></td></tr></table></figure>
+
+<p>Promotion is <strong>conservative by design</strong>. On a typical night, 0–2 candidates are promoted; the rest remain staged for human review.</p>
+<h3 id="Dreaming-configuration-OpenClaw-plugins"><a href="#Dreaming-configuration-OpenClaw-plugins" class="headerlink" title="Dreaming configuration (OpenClaw plugins):"></a>Dreaming configuration (OpenClaw plugins):</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">&quot;plugins&quot;: &#123;</span><br><span class="line">  &quot;entries&quot;: &#123;</span><br><span class="line">    &quot;memory-core&quot;: &#123;</span><br><span class="line">      &quot;config&quot;: &#123;</span><br><span class="line">        &quot;dreaming&quot;: &#123;</span><br><span class="line">          &quot;enabled&quot;: true,</span><br><span class="line">          &quot;light&quot;: &#123; &quot;interval&quot;: &quot;0 3 * * *&quot;, &quot;maxCandidates&quot;: 50 &#125;,</span><br><span class="line">          &quot;deep&quot;:  &#123; &quot;interval&quot;: &quot;0 3:30 * * *&quot; &#125;,</span><br><span class="line">          &quot;rem&quot;:   &#123; &quot;interval&quot;: &quot;0 3:45 * * *&quot; &#125;,</span><br><span class="line">          &quot;maxTokensPerCycle&quot;: 8192</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;,</span><br><span class="line">    &quot;memory-wiki&quot;: &#123;</span><br><span class="line">      &quot;enabled&quot;: true,</span><br><span class="line">      &quot;config&quot;: &#123;</span><br><span class="line">        &quot;bridge&quot;: &#123;</span><br><span class="line">          &quot;readMemoryArtifacts&quot;: true,</span><br><span class="line">          &quot;indexDreamReports&quot;: true,</span><br><span class="line">          &quot;indexDailyNotes&quot;: true,</span><br><span class="line">          &quot;followMemoryEvents&quot;: true</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="6-Agent-Workspace-Isolation-v3-0"><a href="#6-Agent-Workspace-Isolation-v3-0" class="headerlink" title="6. Agent Workspace Isolation (v3.0)"></a>6. Agent Workspace Isolation (v3.0)</h2><p>Since v3.0 (2026-05-15), each sub-agent maintains its own memory workspace:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">workspace/</span><br><span class="line">├── coder/memory/        ←沈漫歌&#x27;s code patterns, project context</span><br><span class="line">├── devops/memory/       ←苏清雅&#x27;s deployment history</span><br><span class="line">├── tester/memory/       ←钟离燕&#x27;s test cases and fixtures</span><br><span class="line">├── security/memory/     ←洛飞烟&#x27;s audit findings</span><br><span class="line">├── uxui/memory/         ←楚灵儿&#x27;s design decisions</span><br><span class="line">└── accountant/memory/   ←江惜月&#x27;s cost baselines</span><br></pre></td></tr></table></figure>
+
+<p><strong>Rules</strong>:</p>
+<ul>
+<li><strong>含烟 can write</strong>: Serena can inject knowledge into any agent’s memory (e.g., adding a new deployment procedure to devops)</li>
+<li><strong>Agents self-manage</strong>: Each agent can freely read&#x2F;write its own workspace</li>
+<li><strong>No cross-contamination</strong>: Agents cannot write to Serena’s memory&#x2F; or MEMORY.md</li>
+<li><strong>Nightly audit</strong>: Serena reviews agent memories for drift, duplication, and staleness</li>
+</ul>
+<p>This isolation pattern reduced context pollution incidents by <strong>80%</strong> compared to the shared-memory approach used in v2.x.</p>
+<h2 id="7-Problems-Encountered-and-Solutions"><a href="#7-Problems-Encountered-and-Solutions" class="headerlink" title="7. Problems Encountered and Solutions"></a>7. Problems Encountered and Solutions</h2><h3 id="Problem-1-Memory-Bloat-—-182-Files-60MB-Raw-Text"><a href="#Problem-1-Memory-Bloat-—-182-Files-60MB-Raw-Text" class="headerlink" title="Problem 1: Memory Bloat — 182 Files, 60MB+ Raw Text"></a>Problem 1: Memory Bloat — 182 Files, 60MB+ Raw Text</h3><p><strong>Issue</strong>: After three months of operation, the memory directory accumulated 182 files across layers. Loading all of them consumed ~12K tokens just in system prompts, degrading reasoning quality.</p>
+<p><strong>Solution</strong>: Enforced the <strong>Memory Router</strong> pattern. MEMORY.md was slimmed from 450+ lines to &lt; 150. All detailed content was moved to sub-files with anchor pointers. The context injection was tiered (HOT&#x2F;WARM&#x2F;COLD&#x2F;FROZEN).</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Before: 450 lines, no structure, full load</span></span><br><span class="line"><span class="comment"># After:  148 lines, 12 anchors, on-demand load</span></span><br><span class="line"><span class="built_in">wc</span> -l MEMORY.md   <span class="comment"># → 148</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="Problem-2-Session-Amnesia-—-Daily-4AM-Reset"><a href="#Problem-2-Session-Amnesia-—-Daily-4AM-Reset" class="headerlink" title="Problem 2: Session Amnesia — Daily 4AM Reset"></a>Problem 2: Session Amnesia — Daily 4AM Reset</h3><p><strong>Issue</strong>: OpenClaw’s default session cleanup runs at 04:00 daily, deleting session transcripts. Agents would “forget” everything from the previous day.</p>
+<p><strong>Solution</strong>: Added a <strong>03:30 pre-cleanup cron</strong> that archives session context to <code>memory/summaries/</code> before the reset, configured <code>llmSlug</code> for efficient retrieval, and set session message retention to 60 messages:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">&quot;session&quot;: &#123;</span><br><span class="line">  &quot;maxMessagesPerChannel&quot;: 60,</span><br><span class="line">  &quot;llmSlug&quot;: &#123;</span><br><span class="line">    &quot;enabled&quot;: true,</span><br><span class="line">    &quot;model&quot;: &quot;deepseek/deepseek-v4-flash&quot;,</span><br><span class="line">    &quot;interval&quot;: 10</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Problem-3-Dream-Candidate-Quality-—-High-Noise-Low-Signal"><a href="#Problem-3-Dream-Candidate-Quality-—-High-Noise-Low-Signal" class="headerlink" title="Problem 3: Dream Candidate Quality — High Noise, Low Signal"></a>Problem 3: Dream Candidate Quality — High Noise, Low Signal</h3><p><strong>Issue</strong>: Early dreaming runs extracted hundreds of candidates per night with confidence scores at 0.50–0.62, most of which were trivial conversation snippets.</p>
+<p><strong>Solution</strong>: Added a <code>minConfidence</code> threshold of 0.65 for promotion consideration, and introduced <strong>evidence chains</strong> — candidates must be traceable to at least 2 independent session references to qualify:</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Pseudo: promotion gate logic</span></span><br><span class="line"><span class="keyword">if</span> candidate.confidence &lt; <span class="number">0.65</span>:</span><br><span class="line">    discard()</span><br><span class="line"><span class="keyword">elif</span> candidate.session_references &lt; <span class="number">2</span>:</span><br><span class="line">    stage(<span class="string">&quot;insufficient_evidence&quot;</span>)</span><br><span class="line"><span class="keyword">elif</span> candidate.conflict_with_verified:</span><br><span class="line">    stage(<span class="string">&quot;conflict&quot;</span>)</span><br><span class="line"><span class="keyword">else</span>:</span><br><span class="line">    promote_to_summaries()</span><br></pre></td></tr></table></figure>
+
+<h3 id="Problem-4-Anchor-Dead-Links"><a href="#Problem-4-Anchor-Dead-Links" class="headerlink" title="Problem 4: Anchor Dead Links"></a>Problem 4: Anchor Dead Links</h3><p><strong>Issue</strong>: As files were moved during restructuring, MEMORY.md anchors pointed to nonexistent paths, causing <code>memory_get()</code> failures.</p>
+<p><strong>Solution</strong>: Added a <strong>nightly anchor integrity check</strong> that validates every path in MEMORY.md:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Extracted from nightly cron</span></span><br><span class="line">grep -oP <span class="string">&#x27;(?&lt;=→ ).*&#x27;</span> MEMORY.md | <span class="keyword">while</span> <span class="built_in">read</span> path; <span class="keyword">do</span></span><br><span class="line">  [ -f <span class="string">&quot;<span class="variable">$path</span>&quot;</span> ] || <span class="built_in">echo</span> <span class="string">&quot;DEAD LINK: <span class="variable">$path</span>&quot;</span></span><br><span class="line"><span class="keyword">done</span></span><br></pre></td></tr></table></figure>
+
+<p>Dead links are automatically downgraded to a <code>⚠️</code> warning in MEMORY.md and re-checked after 24h.</p>
+<h2 id="8-File-Distribution-and-Storage"><a href="#8-File-Distribution-and-Storage" class="headerlink" title="8. File Distribution and Storage"></a>8. File Distribution and Storage</h2><p>Current state after optimization (as of 2026-05-25):</p>
+<table>
+<thead>
+<tr>
+<th>Category</th>
+<th align="center">File Count</th>
+<th align="center">Avg Size</th>
+<th align="center">Total</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Long-term memory</td>
+<td align="center">~60</td>
+<td align="center">8KB</td>
+<td align="center">~480KB</td>
+</tr>
+<tr>
+<td>Governance rules</td>
+<td align="center">~80</td>
+<td align="center">3KB</td>
+<td align="center">~240KB</td>
+</tr>
+<tr>
+<td>Dreaming (all stages)</td>
+<td align="center">~30</td>
+<td align="center">10KB</td>
+<td align="center">~300KB</td>
+</tr>
+<tr>
+<td>Agent workspaces</td>
+<td align="center">~12</td>
+<td align="center">4KB</td>
+<td align="center">~48KB</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td align="center"><strong>~182</strong></td>
+<td align="center"></td>
+<td align="center"><strong>~1.1MB</strong></td>
+</tr>
+</tbody></table>
+<p>On the N100’s 512GB NVMe, this is negligible. The <strong>token cost of loading</strong> is the constraint, not storage.</p>
+<h2 id="9-Summary"><a href="#9-Summary" class="headerlink" title="9. Summary"></a>9. Summary</h2><p>HanyanOS’s layered memory architecture achieves <strong>sub-second retrieval, sub-2000-token context overhead, and multi-month persistence</strong> on an Intel N100:</p>
+<ul>
+<li><strong>Memory Router</strong> (MEMORY.md) — &lt; 150 lines, anchors-only, on-demand loading</li>
+<li><strong>Four layers</strong> — Long-term (verified), Working (session), Dreaming (offline), Agent WS (isolated)</li>
+<li><strong>Dreaming pipeline</strong> — Light → REM → Deep, conservative promotion, no direct long-term writes</li>
+<li><strong>Trust-level metadata</strong> — Prevents hallucination contamination from dreams and inferences</li>
+<li><strong>Tiered injection</strong> — HOT&#x2F;WARM&#x2F;COLD&#x2F;FROZEN reduces context size by 62%</li>
+<li><strong>Agent workspace isolation</strong> — Each sub-agent self-manages memory without cross-contamination</li>
+<li><strong>Nightly integrity checks</strong> — Dead link detection, drift audit, staleness reporting</li>
+</ul>
+<p>This architecture runs continuously since v3.0 (May 15) with <strong>zero hallucination-contamination incidents</strong> and an average memory retrieval latency of <strong>&lt; 200ms</strong>.</p>
+<hr>
+<p><em>Next in series: #8 — Nightly Automation — Cron Job Orchestration and System Maintenance</em></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Michael Chen
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://www.chenyun.org/2026/05/25/2026-05-25-hanyan-infra-7/" title="HanyanOS 部署手记">https://www.chenyun.org/2026/05/25/2026-05-25-hanyan-infra-7/</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/DevOps/" rel="tag"># DevOps</a>
+              <a href="/tags/HanyanOS/" rel="tag"># HanyanOS</a>
+              <a href="/tags/Infrastructure/" rel="tag"># Infrastructure</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/05/25/2026-05-25-hanyan-infra-6/" rel="prev" title="HanyanOS 部署手记">
+                  <i class="fa fa-angle-left"></i> HanyanOS 部署手记
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2022 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Michael Chen</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>
