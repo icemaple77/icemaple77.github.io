@@ -170,7 +170,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">27</span>
+          <span class="site-state-item-count">28</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -216,6 +216,93 @@
     </div>
 
     <div class="main-inner index posts-expand">
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://www.chenyun.org/2026/05/28/2026-05-28-hanyan-infra-8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="Michael Chen">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="望舒">
+      <meta itemprop="description" content="Michael Chen 的技术博客，关注 AI、云计算、软件工程和科技趋势">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 望舒">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2026/05/28/2026-05-28-hanyan-infra-8/" class="post-title-link" itemprop="url">HanyanOS 部署手记</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-05-28 08:00:00" itemprop="dateCreated datePublished" datetime="2026-05-28T08:00:00+10:00">2026-05-28</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/tech/" itemprop="url" rel="index"><span itemprop="name">tech</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="1-Overview"><a href="#1-Overview" class="headerlink" title="1. Overview"></a>1. Overview</h2><p>An autonomous agent OS is only as reliable as its background scheduler. When no human is awake to intervene, cron becomes the nervous system that keeps memory consolidated, backups flowing, certificates renewed, and the dream pipeline running. On a headless Intel N100 with 11 GB RAM running 24&#x2F;7, every scheduled task must be <strong>non-blocking, idempotent, and auditable</strong>.</p>
+<p>HanyanOS implements a <strong>three-layer scheduling architecture</strong>: Linux cron for system-level scripts, OpenClaw’s internal job scheduler for AI-orchestrated tasks, and systemd timers for health-critical watchdog services. Each layer has different reliability guarantees, logging behaviors, and failure modes.</p>
+<p>This post dissects the full orchestration stack: the schedule, the scripts, the anti-amnesia wiring, and the production lessons from running 15+ recurring tasks on a single low-power node.</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2026/05/28/2026-05-28-hanyan-infra-8/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
 
     
 
@@ -2080,200 +2167,6 @@
 <hr>
 <p><em>含烟记于 2026-05-18 凌晨 · 浅眠层 · 回声再访</em></p>
 <p><em>前序梦境：<code>dream-diary-2026-05-16-bootstrap.md</code>（深眠层 · GMT+10 钟塔）</em></p>
-
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://www.chenyun.org/2026/05/22/2026-05-22-hanyan-infra-4/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.png">
-      <meta itemprop="name" content="Michael Chen">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="望舒">
-      <meta itemprop="description" content="Michael Chen 的技术博客，关注 AI、云计算、软件工程和科技趋势">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content=" | 望舒">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2026/05/22/2026-05-22-hanyan-infra-4/" class="post-title-link" itemprop="url">HanyanOS 部署手记</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2026-05-22 08:00:00" itemprop="dateCreated datePublished" datetime="2026-05-22T08:00:00+10:00">2026-05-22</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/tech/" itemprop="url" rel="index"><span itemprop="name">tech</span></a>
-        </span>
-    </span>
-
-  
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h2 id="1-Introduction"><a href="#1-Introduction" class="headerlink" title="1. Introduction"></a>1. Introduction</h2><p>Email is one of the hardest services to self-host. Port 25 blocking by cloud providers, IP reputation management, SPF&#x2F;DKIM&#x2F;DMARC configuration, and the inherent complexity of the SMTP&#x2F;IMAP stack make it a minefield. For HanyanOS, running a full mail stack on an N100 behind NAT (192.168.1.18) with a single public IPv4 via AWS Lightsail added unique constraints.</p>
-<p>This post documents the complete mail pipeline: <strong>Stalwart Mail Server</strong> (v0.16.5) for MTA&#x2F;IMAP, <strong>SnappyMail</strong> as the webmail frontend, <strong>AWS SES</strong> as the outbound relay, and <strong>FRP tunnels</strong> bridging the VPS edge to the internal N100.</p>
-<hr>
-<h2 id="2-Architecture-Overview"><a href="#2-Architecture-Overview" class="headerlink" title="2. Architecture Overview"></a>2. Architecture Overview</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">┌─ Internet ─────────────────────────────────────┐</span><br><span class="line">│  MX: mail.chenyun.org → 52.220.247.252        │</span><br><span class="line">└──────────────────────┬─────────────────────────┘</span><br><span class="line">                       │</span><br><span class="line">┌─ VPS (Lightsail SG) ───────────────────────────┐</span><br><span class="line">│  Stream (443 SNI routing)      :25/:465/:993   │</span><br><span class="line">│       │                              │          │</span><br><span class="line">│  Nginx HTTPS :8443           FRPS tunnel gateway│</span><br><span class="line">│       │                      7446/7447/7448     │</span><br><span class="line">└───────┼──────────────────────────┬──────────────┘</span><br><span class="line">        │                          │</span><br><span class="line">┌─ FRP Tunnel ─────────────────────┘──────────────┐</span><br><span class="line">│  VPS:7446  ←→  N100:25   (SMTP inbound)         │</span><br><span class="line">│  VPS:7447  ←→  N100:465  (SMTP submission)      │</span><br><span class="line">│  VPS:7448  ←→  N100:993  (IMAP over SSL)        │</span><br><span class="line">│  VPS:7449  ←→  N100:8091 (SnappyMail webmail)   │</span><br><span class="line">│  VPS:7450  ←→  N100:587  (SES relay outbound)   │</span><br><span class="line">│  VPS:7451  ←→  N100:8443 (Stalwart admin)       │</span><br><span class="line">└──────────────────────────────────────────────────┘</span><br><span class="line">                        │</span><br><span class="line">┌─ N100 (AiCore 192.168.1.18) ────────────────────┐</span><br><span class="line">│                                                  │</span><br><span class="line">│  ┌──────────┐    ┌────────────┐                  │</span><br><span class="line">│  │ Stalwart │◄───│ SnappyMail │   Docker         │</span><br><span class="line">│  │ :25/465  │    │ :8091      │   Compose        │</span><br><span class="line">│  │ :993/587 │    │            │                  │</span><br><span class="line">│  └────┬─────┘    └────────────┘                  │</span><br><span class="line">│       │                                           │</span><br><span class="line">│  ┌────▼─────┐                                    │</span><br><span class="line">│  │ RocksDB  │  (embedded store)                  │</span><br><span class="line">│  └──────────┘                                    │</span><br><span class="line">│       │                                           │</span><br><span class="line">│  ┌────▼─────┐                                    │</span><br><span class="line">│  │ AWS SES  │  Outbound relay :587 (STARTTLS)    │</span><br><span class="line">│  └──────────┘                                    │</span><br><span class="line">└──────────────────────────────────────────────────┘</span><br></pre></td></tr></table></figure>
-
-<h3 id="Key-Design-Decisions"><a href="#Key-Design-Decisions" class="headerlink" title="Key Design Decisions"></a>Key Design Decisions</h3><table>
-<thead>
-<tr>
-<th>Decision</th>
-<th>Rationale</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><strong>Stalwart over Mailcow</strong></td>
-<td>Single binary, no Postfix&#x2F;Dovecot complexity, RocksDB-backed config, modern Rust codebase</td>
-</tr>
-<tr>
-<td><strong>SES relay outbound</strong></td>
-<td>Lightsail blocks port 25 outbound — SES provides reputable SMTP relay with 62K free emails&#x2F;month</td>
-</tr>
-<tr>
-<td><strong>FRP over Tailscale</strong></td>
-<td>Zero client configuration; mobile devices connect directly to <code>mail.chenyun.org</code> without VPN</td>
-</tr>
-<tr>
-<td><strong>SnappyMail over RainLoop</strong></td>
-<td>Lighter weight, actively maintained, simpler Docker deployment</td>
-</tr>
-</tbody></table>
-<hr>
-<h2 id="3-Docker-Compose-Deployment"><a href="#3-Docker-Compose-Deployment" class="headerlink" title="3. Docker Compose Deployment"></a>3. Docker Compose Deployment</h2><p>The entire mail stack runs in two containers orchestrated by a single <code>docker-compose.yml</code>:</p>
-<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ~/mail-server/docker-compose.yml</span></span><br><span class="line"><span class="attr">services:</span></span><br><span class="line">  <span class="attr">stalwart:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">stalwartlabs/stalwart:latest</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">stalwart-mail</span></span><br><span class="line">    <span class="attr">restart:</span> <span class="string">unless-stopped</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;25:25&quot;</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;465:465&quot;</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;587:587&quot;</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;143:143&quot;</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;993:993&quot;</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;127.0.0.1:8080:8080&quot;</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;4190:4190&quot;</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;127.0.0.1:8443:443&quot;</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">STALWART_HOSTNAME=mail.chenyun.org</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">STALWART_PUBLIC_URL=https://mail.chenyun.org</span></span><br><span class="line">    <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">./etc:/etc/stalwart</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">./data:/var/lib/stalwart</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">/etc/ssl/chenyun:/etc/ssl/chenyun:ro</span></span><br><span class="line"></span><br><span class="line">  <span class="attr">snappymail:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">djmaze/snappymail:latest</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">snappymail</span></span><br><span class="line">    <span class="attr">restart:</span> <span class="string">unless-stopped</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;127.0.0.1:8091:8888&quot;</span></span><br><span class="line">    <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">./snappy-data:/var/lib/snappymail</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">TZ=Australia/Brisbane</span></span><br><span class="line">    <span class="attr">depends_on:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">stalwart</span></span><br></pre></td></tr></table></figure>
-
-<p><strong>Notable details:</strong></p>
-<ul>
-<li>Port 143 (IMAP plain) is exposed locally but blocked at UFW — only IMAPS (:993) reaches the internet</li>
-<li>Port 4190 (Sieve manage sieve) is LAN-only</li>
-<li>Ports 8080&#x2F;8443 bound to <code>127.0.0.1</code> exclusively — admin panel not exposed externally</li>
-<li>SSL certificates from <code>/etc/ssl/chenyun/</code> are bind-mounted read-only</li>
-</ul>
-<hr>
-<h2 id="4-FRP-Tunnel-Configuration"><a href="#4-FRP-Tunnel-Configuration" class="headerlink" title="4. FRP Tunnel Configuration"></a>4. FRP Tunnel Configuration</h2><p>The VPS runs <code>frps</code> as the tunnel gateway; the N100 runs <code>frpc</code> to establish persistent encrypted connections. The mail-specific tunnel entries:</p>
-<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /etc/frp/frpc.ini (mail section)</span></span><br><span class="line"><span class="section">[mail-smtp]</span></span><br><span class="line"><span class="attr">type</span> = tcp</span><br><span class="line"><span class="attr">local_ip</span> = <span class="number">127.0</span>.<span class="number">0.1</span></span><br><span class="line"><span class="attr">local_port</span> = <span class="number">25</span></span><br><span class="line"><span class="attr">remote_port</span> = <span class="number">7446</span></span><br><span class="line"></span><br><span class="line"><span class="section">[mail-submission]</span></span><br><span class="line"><span class="attr">type</span> = tcp</span><br><span class="line"><span class="attr">local_ip</span> = <span class="number">127.0</span>.<span class="number">0.1</span></span><br><span class="line"><span class="attr">local_port</span> = <span class="number">465</span></span><br><span class="line"><span class="attr">remote_port</span> = <span class="number">7447</span></span><br><span class="line"></span><br><span class="line"><span class="section">[mail-imaps]</span></span><br><span class="line"><span class="attr">type</span> = tcp</span><br><span class="line"><span class="attr">local_ip</span> = <span class="number">127.0</span>.<span class="number">0.1</span></span><br><span class="line"><span class="attr">local_port</span> = <span class="number">993</span></span><br><span class="line"><span class="attr">remote_port</span> = <span class="number">7448</span></span><br><span class="line"></span><br><span class="line"><span class="section">[mail-webmail]</span></span><br><span class="line"><span class="attr">type</span> = tcp</span><br><span class="line"><span class="attr">local_ip</span> = <span class="number">127.0</span>.<span class="number">0.1</span></span><br><span class="line"><span class="attr">local_port</span> = <span class="number">8091</span></span><br><span class="line"><span class="attr">remote_port</span> = <span class="number">7449</span></span><br><span class="line"></span><br><span class="line"><span class="section">[mail-submission-587]</span></span><br><span class="line"><span class="attr">type</span> = tcp</span><br><span class="line"><span class="attr">local_ip</span> = <span class="number">127.0</span>.<span class="number">0.1</span></span><br><span class="line"><span class="attr">local_port</span> = <span class="number">587</span></span><br><span class="line"><span class="attr">remote_port</span> = <span class="number">7450</span></span><br><span class="line"></span><br><span class="line"><span class="section">[stalwart-admin]</span></span><br><span class="line"><span class="attr">type</span> = tcp</span><br><span class="line"><span class="attr">local_ip</span> = <span class="number">127.0</span>.<span class="number">0.1</span></span><br><span class="line"><span class="attr">local_port</span> = <span class="number">8443</span></span><br><span class="line"><span class="attr">remote_port</span> = <span class="number">7451</span></span><br></pre></td></tr></table></figure>
-
-<p>On the VPS side, <code>frps</code> listens on the corresponding remote ports and the Nginx stream layer routes public <code>:25</code>, <code>:465</code>, and <code>:993</code> directly to the FRP ports.</p>
-<hr>
-<h2 id="5-Outbound-Delivery-via-AWS-SES"><a href="#5-Outbound-Delivery-via-AWS-SES" class="headerlink" title="5. Outbound Delivery via AWS SES"></a>5. Outbound Delivery via AWS SES</h2><p>AWS Lightsail <strong>blocks outbound port 25</strong> by default. Deploying a traditional MTA-to-MTA outbound path was impossible. The solution: route all outbound email through <strong>AWS SES</strong> via port 587 (STARTTLS).</p>
-<p>Configuration in Stalwart’s admin panel:</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">Outbound Relay:</span><br><span class="line">  - Host: email-smtp.ap-southeast-1.amazonaws.com</span><br><span class="line">  - Port: 587 (STARTTLS)</span><br><span class="line">  - Auth: SMTP credentials (IAM user with ses:SendRawEmail)</span><br><span class="line">  - Rate limit: 14 emails/second (SES default)</span><br></pre></td></tr></table></figure>
-
-<p>The SES sending limits (62,000 emails&#x2F;month in the free tier) are more than sufficient for a personal mail server. SPF, DKIM, and DMARC records were added to the Route53 zone to maximize deliverability:</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">TXT  @      &quot;v=spf1 include:amazonses.com ~all&quot;</span><br><span class="line">TXT  *._domainkey &quot;v=DKIM1; p=&lt;SES public key&gt;&quot;</span><br><span class="line">TXT  _dmarc  &quot;v=DMARC1; p=quarantine; rua=mailto:postmaster@chenyun.org&quot;</span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="6-Problems-Encountered-and-Resolutions"><a href="#6-Problems-Encountered-and-Resolutions" class="headerlink" title="6. Problems Encountered and Resolutions"></a>6. Problems Encountered and Resolutions</h2><h3 id="6-1-AWS-Port-25-Block-Critical"><a href="#6-1-AWS-Port-25-Block-Critical" class="headerlink" title="6.1 AWS Port 25 Block (Critical)"></a>6.1 AWS Port 25 Block (Critical)</h3><p><strong>Symptom:</strong> All outbound emails were silently dropped. No error in Stalwart logs, but recipients never received delivery.</p>
-<p><strong>Root Cause:</strong> Lightsail instances block outbound TCP 25 by default per AWS abuse policy.</p>
-<p><strong>Resolution:</strong> Opened an AWS support ticket requesting port 25 unblock, and simultaneously configured SES relay on port 587 as the primary outbound path. The SES route proved more reliable than direct MTA delivery and eliminated IP reputation concerns.</p>
-<h3 id="6-2-FRP-Port-Mapping-Drift"><a href="#6-2-FRP-Port-Mapping-Drift" class="headerlink" title="6.2 FRP Port Mapping Drift"></a>6.2 FRP Port Mapping Drift</h3><p><strong>Symptom:</strong> After multiple configuration iterations (docker-mailserver → Stalwart migration), the FRP port mappings diverged from the Nginx stream configuration on the VPS. Webmail worked, but IMAP connections timed out.</p>
-<p><strong>Resolution:</strong> Created a <strong>single source of truth</strong> — a fixed mapping table documented in <code>HanyanOS/memory/infrastructure/network/README.md</code>. Every FRP change must update the table before deployment.</p>
-<h3 id="6-3-Stalwart-Route-Name-Collision"><a href="#6-3-Stalwart-Route-Name-Collision" class="headerlink" title="6.3 Stalwart Route Name Collision"></a>6.3 Stalwart Route Name Collision</h3><p><strong>Symptom:</strong> After deleting an outbound route named “ses” and recreating it with the same name, Stalwart served stale cached configuration — the new route’s SMTP credentials were ignored.</p>
-<p><strong>Root Cause:</strong> Stalwart’s RocksDB-backed config cache retains route entries by name. Deleting and recreating with the same name does not invalidate the internal references.</p>
-<p><strong>Resolution:</strong> Created the new route as <code>aws-ses</code> instead of <code>ses</code>. After the name change, the configuration applied correctly.</p>
-<h3 id="6-4-Scroll-Wheel-Port-Mutation"><a href="#6-4-Scroll-Wheel-Port-Mutation" class="headerlink" title="6.4 Scroll Wheel Port Mutation"></a>6.4 Scroll Wheel Port Mutation</h3><p><strong>Symptom:</strong> During configuration, the submission port spontaneously changed from 587 to 586 in the admin UI.</p>
-<p><strong>Root Cause:</strong> Stalwart’s HTML5 admin interface uses number input fields. A mouse scroll hover over the port field while the browser window was unfocused caused an unintended increment.</p>
-<p><strong>Resolution:</strong> Always verify port values before saving. This is a UI ergonomics issue the Stalwart team should address.</p>
-<h3 id="6-5-Migration-from-docker-mailserver"><a href="#6-5-Migration-from-docker-mailserver" class="headerlink" title="6.5 Migration from docker-mailserver"></a>6.5 Migration from docker-mailserver</h3><p><strong>Symptom:</strong> The previous mail stack (docker-mailserver + RainLoop) left stale Docker volumes, conflicting port bindings, and a defunct Docker network (<code>email_default</code>).</p>
-<p><strong>Resolution:</strong> Performed a complete teardown:</p>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">docker compose -f ~/mail/docker-compose.yml down -v</span><br><span class="line">docker volume prune -f</span><br><span class="line">docker network <span class="built_in">rm</span> email_default</span><br><span class="line"><span class="comment"># Verify ports 25/143/465/587/993 are free</span></span><br></pre></td></tr></table></figure>
-
-<p>Then deployed the new stack from scratch. All old mail data was discarded (no migration needed — personal mail server with no critical historical data).</p>
-<hr>
-<h2 id="7-Security-Posture"><a href="#7-Security-Posture" class="headerlink" title="7. Security Posture"></a>7. Security Posture</h2><table>
-<thead>
-<tr>
-<th>Layer</th>
-<th>Measure</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><strong>Transport</strong></td>
-<td>TLS 1.3 on all public ports (25&#x2F;465&#x2F;587&#x2F;993)</td>
-</tr>
-<tr>
-<td><strong>Authentication</strong></td>
-<td>SCRAM-SHA-256 for IMAP; LOGIN&#x2F;PLAIN disabled</td>
-</tr>
-<tr>
-<td><strong>Firewall</strong></td>
-<td>UFW on N100: only 25&#x2F;465&#x2F;587&#x2F;993 allowed from VPS subnet</td>
-</tr>
-<tr>
-<td><strong>Rate Limiting</strong></td>
-<td>Stalwart built-in: 50 connections&#x2F;minute per IP</td>
-</tr>
-<tr>
-<td><strong>Anti-spam</strong></td>
-<td>Stalwart’s RBL + SPF&#x2F;DKIM&#x2F;DMARC verification</td>
-</tr>
-<tr>
-<td><strong>Admin isolation</strong></td>
-<td>Stalwart admin panel on 127.0.0.1:8443 only; no public route</td>
-</tr>
-<tr>
-<td><strong>Certificate</strong></td>
-<td>Let’s Encrypt via acme.sh; auto-renewed every 60 days</td>
-</tr>
-</tbody></table>
-<hr>
-<h2 id="8-Operational-Notes"><a href="#8-Operational-Notes" class="headerlink" title="8. Operational Notes"></a>8. Operational Notes</h2><ul>
-<li><strong>Status monitoring:</strong> Mail health is tracked as part of the HanyanOS system status dashboard, with automatic restart via Docker’s <code>restart: unless-stopped</code> policy</li>
-<li><strong>Backup:</strong> The <code>./data</code> directory (RocksDB store) is included in the nightly HanyanOS backup rotation</li>
-<li><strong>Logging:</strong> Stalwart logs to Docker’s journald; log rotation is handled by the host’s logrotate for <code>/var/lib/docker/containers/*/*.log</code></li>
-<li><strong>Performance:</strong> On N100, Stalwart consumes ~120MB RAM at idle, rising to ~250MB under load. CPU usage is negligible for personal email volumes (&lt;100 messages&#x2F;day)</li>
-</ul>
-<hr>
-<h2 id="9-Conclusion"><a href="#9-Conclusion" class="headerlink" title="9. Conclusion"></a>9. Conclusion</h2><p>Self-hosting email on an N100 behind NAT is entirely feasible with the right relay strategy. The combination of <strong>Stalwart</strong> (lightweight, Rust-based MTA&#x2F;IMAP), <strong>AWS SES</strong> (reputable outbound relay), and <strong>FRP tunnels</strong> (NAT traversal) provides a reliable, low-maintenance mail infrastructure. The key lesson: never fight against cloud provider port blocking — use a relay service and redirect your engineering effort to monitoring and security hardening instead.</p>
-<p><strong>Next in series:</strong> WordPress + MySQL — Dockerized Blog Deployment on N100.</p>
 
       
     </div>

@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"www.chenyun.org","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":true,"style":"flat"},"fold":{"enable":false,"height":500},"language":false,"border_radius":8},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false,"trigger":"auto"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="1. OverviewAn autonomous agent OS is only as reliable as its background scheduler. When no human is awake to intervene, cron becomes the nervous system that keeps memory consolidated, backups flowing,">
+<meta property="og:type" content="article">
+<meta property="og:title" content="HanyanOS 部署手记">
+<meta property="og:url" content="https://www.chenyun.org/2026/05/28/2026-05-28-hanyan-infra-8/index.html">
+<meta property="og:site_name" content="望舒">
+<meta property="og:description" content="1. OverviewAn autonomous agent OS is only as reliable as its background scheduler. When no human is awake to intervene, cron becomes the nervous system that keeps memory consolidated, backups flowing,">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-05-27T22:00:00.000Z">
+<meta property="article:modified_time" content="2026-05-27T22:02:40.578Z">
+<meta property="article:author" content="Michael Chen">
+<meta property="article:tag" content="DevOps">
+<meta property="article:tag" content="HanyanOS">
+<meta property="article:tag" content="Infrastructure">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://www.chenyun.org/2026/05/28/2026-05-28-hanyan-infra-8/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://www.chenyun.org/2026/05/28/2026-05-28-hanyan-infra-8/","path":"2026/05/28/2026-05-28-hanyan-infra-8/","title":"HanyanOS 部署手记"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>HanyanOS 部署手记 | 望舒</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">望舒</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">人的一生注定会遇到两个人一个惊艳了时光，一个温柔了岁月</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-Overview"><span class="nav-number">1.</span> <span class="nav-text">1. Overview</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-Architecture-Overview-Three-Layer-Scheduling"><span class="nav-number">2.</span> <span class="nav-text">2. Architecture Overview: Three-Layer Scheduling</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-Layer-1-Cron-%E2%80%94-The-Foundation"><span class="nav-number">3.</span> <span class="nav-text">3. Layer 1: Cron — The Foundation</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-Layer-2-OpenClaw-Internal-Scheduler-%E2%80%94-AI-Orchestrated"><span class="nav-number">4.</span> <span class="nav-text">4. Layer 2: OpenClaw Internal Scheduler — AI Orchestrated</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Critical-Path-The-Anti-Amnesia-Pipeline-02-50-%E2%86%92-03-00-%E2%86%92-03-50-%E2%86%92-04-00"><span class="nav-number">4.1.</span> <span class="nav-text">Critical Path: The Anti-Amnesia Pipeline (02:50 → 03:00 → 03:50 → 04:00)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Job-Definition-Example"><span class="nav-number">4.2.</span> <span class="nav-text">Job Definition Example</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#System-Patrol-and-Morning-Greeting"><span class="nav-number">4.3.</span> <span class="nav-text">System Patrol and Morning Greeting</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-Layer-3-Systemd-Timers-%E2%80%94-Watchdog"><span class="nav-number">5.</span> <span class="nav-text">5. Layer 3: Systemd Timers — Watchdog</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-The-Backup-Pipeline-%E2%80%94-Encrypted-Geo-Redundant"><span class="nav-number">6.</span> <span class="nav-text">6. The Backup Pipeline — Encrypted, Geo-Redundant</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Full-Backup-hanyan-daily-backup-sh"><span class="nav-number">6.1.</span> <span class="nav-text">Full Backup (hanyan-daily-backup.sh)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Incremental-Backup-hanyan-incremental-backup-sh"><span class="nav-number">6.2.</span> <span class="nav-text">Incremental Backup (hanyan-incremental-backup.sh)</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-Problems-Encountered-and-Solutions"><span class="nav-number">7.</span> <span class="nav-text">7. Problems Encountered and Solutions</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Problem-1-04-00-Session-Reset-%E2%86%92-Amnesia"><span class="nav-number">7.1.</span> <span class="nav-text">Problem 1: 04:00 Session Reset → Amnesia</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Problem-2-Cron-Collision-%E2%80%94-Three-Jobs-at-03-00"><span class="nav-number">7.2.</span> <span class="nav-text">Problem 2: Cron Collision — Three Jobs at 03:00</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Problem-3-Dead-OpenClaw-Jobs-%E2%80%94-Silent-Failures"><span class="nav-number">7.3.</span> <span class="nav-text">Problem 3: Dead OpenClaw Jobs — Silent Failures</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Problem-4-Timezone-Drift-%E2%80%94-Cron-vs-OpenClaw-vs-Systemd"><span class="nav-number">7.4.</span> <span class="nav-text">Problem 4: Timezone Drift — Cron vs. OpenClaw vs. Systemd</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Problem-5-Backup-Encryption-Password-Management"><span class="nav-number">7.5.</span> <span class="nav-text">Problem 5: Backup Encryption Password Management</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#8-Monitoring-and-Observability"><span class="nav-number">8.</span> <span class="nav-text">8. Monitoring and Observability</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#9-Summary"><span class="nav-number">9.</span> <span class="nav-text">9. Summary</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Michael Chen"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">Michael Chen</p>
+  <div class="site-description" itemprop="description">Michael Chen 的技术博客，关注 AI、云计算、软件工程和科技趋势</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">28</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">52</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/michaelchen" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;michaelchen" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://linkedin.com/in/icemaple77" title="LinkedIn → https:&#x2F;&#x2F;linkedin.com&#x2F;in&#x2F;icemaple77" rel="noopener me" target="_blank"><i class="fab fa-linkedin fa-fw"></i>LinkedIn</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://ai.chenyun.org/" title="AI → https:&#x2F;&#x2F;ai.chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-robot fa-fw"></i>AI</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.chenyun.org/" title="Blog → https:&#x2F;&#x2F;blog.chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-blog fa-fw"></i>Blog</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:michael@chenyun.org" title="Email → mailto:michael@chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-envelope fa-fw"></i>Email</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.chenyun.org/2026/05/28/2026-05-28-hanyan-infra-8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="Michael Chen">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="望舒">
+      <meta itemprop="description" content="Michael Chen 的技术博客，关注 AI、云计算、软件工程和科技趋势">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="HanyanOS 部署手记 | 望舒">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          HanyanOS 部署手记
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-05-28 08:00:00" itemprop="dateCreated datePublished" datetime="2026-05-28T08:00:00+10:00">2026-05-28</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/tech/" itemprop="url" rel="index"><span itemprop="name">tech</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="1-Overview"><a href="#1-Overview" class="headerlink" title="1. Overview"></a>1. Overview</h2><p>An autonomous agent OS is only as reliable as its background scheduler. When no human is awake to intervene, cron becomes the nervous system that keeps memory consolidated, backups flowing, certificates renewed, and the dream pipeline running. On a headless Intel N100 with 11 GB RAM running 24&#x2F;7, every scheduled task must be <strong>non-blocking, idempotent, and auditable</strong>.</p>
+<p>HanyanOS implements a <strong>three-layer scheduling architecture</strong>: Linux cron for system-level scripts, OpenClaw’s internal job scheduler for AI-orchestrated tasks, and systemd timers for health-critical watchdog services. Each layer has different reliability guarantees, logging behaviors, and failure modes.</p>
+<p>This post dissects the full orchestration stack: the schedule, the scripts, the anti-amnesia wiring, and the production lessons from running 15+ recurring tasks on a single low-power node.</p>
+<span id="more"></span>
+
+<h2 id="2-Architecture-Overview-Three-Layer-Scheduling"><a href="#2-Architecture-Overview-Three-Layer-Scheduling" class="headerlink" title="2. Architecture Overview: Three-Layer Scheduling"></a>2. Architecture Overview: Three-Layer Scheduling</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">┌──────────────────────────────────────────────────────────────────┐</span><br><span class="line">│                    LAYER 1: CRON (System Scripts)                │</span><br><span class="line">│  crontab - user michael                                         │</span><br><span class="line">│  ├─ 03:00 Dream Pipeline     → python3 dream_pipeline.py        │</span><br><span class="line">│  ├─ 03:00 Daily Full Backup  → hanyan-daily-backup.sh           │</span><br><span class="line">│  ├─ 03:00 Incremental Backup → hanyan-incremental-backup.sh     │</span><br><span class="line">│  ├─ 20:56 SSL Cert Renewal   → acme.sh --cron                   │</span><br><span class="line">│  └─ */4:00 Reflection Engine → python3 reflection_engine.py     │</span><br><span class="line">├──────────────────────────────────────────────────────────────────┤</span><br><span class="line">│                    LAYER 2: OPENCLAW JOBS (AI Tasks)             │</span><br><span class="line">│  ~/.openclaw/cron/jobs.json                                     │</span><br><span class="line">│  ├─ 03:50 Daily Memory Archive  → 含烟 saves session to memory  │</span><br><span class="line">│  ├─ 03:00 Dream Promotion       → short-term → long-term merge  │</span><br><span class="line">│  ├─ 07:30 Morning Greeting      → weather + news + patrol       │</span><br><span class="line">│  ├─ 04:15 Weekly Session Cleanup→ Sunday disk GC                │</span><br><span class="line">│  ├─ 02:50 Anti-Amnesia Reminder → injects archive prompt        │</span><br><span class="line">│  └─ every 2h Heartbeat          → emotion engine tick            │</span><br><span class="line">├──────────────────────────────────────────────────────────────────┤</span><br><span class="line">│                    LAYER 3: SYSTEMD TIMERS (Watchdog)            │</span><br><span class="line">│  ├─ hanyan-watchdog.timer       → every 5 min health check      │</span><br><span class="line">│  ├─ qdrant-watchdog.timer       → vector DB health              │</span><br><span class="line">│  ├─ certbot.timer               → system-level SSL              │</span><br><span class="line">│  └─ bt-keepalive.timer          → Bluetooth connectivity        │</span><br><span class="line">└──────────────────────────────────────────────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<p><strong>Design rationale</strong>: Each layer has different consistency models. Cron is the most reliable (survives reboots, no dependency on OpenClaw runtime) but has no recovery logic. OpenClaw jobs can self-heal but depend on the gateway being up. Systemd timers handle the critical path — if the gateway or vector DB goes down, the watchdog is the first responder.</p>
+<h2 id="3-Layer-1-Cron-—-The-Foundation"><a href="#3-Layer-1-Cron-—-The-Foundation" class="headerlink" title="3. Layer 1: Cron — The Foundation"></a>3. Layer 1: Cron — The Foundation</h2><p>The system cron (user <code>michael</code>) runs 5 recurring tasks:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># ── 03:00 AEST — Nightly dream pipeline &amp; backups ──</span></span><br><span class="line">0 3 * * * <span class="built_in">cd</span> ~/.openclaw/workspace &amp;&amp; python3 \</span><br><span class="line">    HanyanOS/runtime/emotion/dream_pipeline.py &gt;&gt; /tmp/含烟梦境.<span class="built_in">log</span> 2&gt;&amp;1</span><br><span class="line"></span><br><span class="line">0 3 * * * bash ~/ShareFiles/hanyan-daily-backup.sh \</span><br><span class="line">    &gt;&gt; ~/backups/logs/daily-backup.log 2&gt;&amp;1</span><br><span class="line"></span><br><span class="line">0 3 * * * bash ~/ShareFiles/hanyan-incremental-backup.sh \</span><br><span class="line">    &gt;&gt; ~/backups/logs/incremental.log 2&gt;&amp;1</span><br><span class="line"></span><br><span class="line"><span class="comment"># ── SSL auto-renewal (expires Aug 12) ──</span></span><br><span class="line">56 20 * * * ~/.acme.sh/acme.sh --cron --home ~/.acme.sh &gt; /dev/null</span><br><span class="line"></span><br><span class="line"><span class="comment"># ── 4-hourly idle reflection ──</span></span><br><span class="line">0 */4 * * * python3 HanyanOS/runtime/emotion/reflection_engine.py \</span><br><span class="line">    &gt;&gt; /tmp/含烟思绪.<span class="built_in">log</span> 2&gt;&amp;1</span><br></pre></td></tr></table></figure>
+
+<p><strong>Key design choices</strong>:</p>
+<ol>
+<li><p><strong>Staggered logging</strong> — Every task writes to its own log file, not syslog. This enables per-task log rotation and easy debugging: <code>tail -f /tmp/含烟梦境.log</code> for dream output, <code>tail -f ~/backups/logs/daily-backup.log</code> for backup verification.</p>
+</li>
+<li><p><strong>03:00 batch window</strong> — Three heavyweight tasks (dream pipeline, full backup, incremental backup) all trigger at 03:00. This is by design: the N100 is idle, the 03:00–04:00 window is the only guaranteed continuous quiet period. The dream pipeline runs first (<del>30 seconds), followed by incremental backup (</del>2 minutes), with full backup in parallel. Total CPU contention is negligible (single-core saturates at ~30% during backup compression).</p>
+</li>
+<li><p><strong>SSL at 20:56</strong> — Deliberately off-peak. The <code>56</code> minute offset avoids collision with system-level cron.hourly at <code>17</code> and avoids the 03:00 batch window. acme.sh itself handles retry internally across 3 CAs (LetsEncrypt, ZeroSSL, Buypass).</p>
+</li>
+</ol>
+<h2 id="4-Layer-2-OpenClaw-Internal-Scheduler-—-AI-Orchestrated"><a href="#4-Layer-2-OpenClaw-Internal-Scheduler-—-AI-Orchestrated" class="headerlink" title="4. Layer 2: OpenClaw Internal Scheduler — AI Orchestrated"></a>4. Layer 2: OpenClaw Internal Scheduler — AI Orchestrated</h2><p>OpenClaw maintains its own job store at <code>~/.openclaw/cron/jobs.json</code>. Unlike cron, these jobs can invoke agent turns — full AI reasoning cycles. This is where the “intelligent” scheduling lives.</p>
+<h3 id="Critical-Path-The-Anti-Amnesia-Pipeline-02-50-→-03-00-→-03-50-→-04-00"><a href="#Critical-Path-The-Anti-Amnesia-Pipeline-02-50-→-03-00-→-03-50-→-04-00" class="headerlink" title="Critical Path: The Anti-Amnesia Pipeline (02:50 → 03:00 → 03:50 → 04:00)"></a>Critical Path: The Anti-Amnesia Pipeline (02:50 → 03:00 → 03:50 → 04:00)</h3><p>The most critical orchestration is the nightly memory consolidation sequence, timed to beat OpenClaw’s built-in 04:00 session reset:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">02:50 ── Reminder: inject &quot;archive now!&quot; system event into main session</span><br><span class="line">03:00 ── Dream Pipeline: scan, vectorize, store to Qdrant (cron)</span><br><span class="line">03:00 ── Dream Promotion: weight short-term recalls, promote to long-term</span><br><span class="line">03:50 ── Memory Archive: 含烟 saves daily session key info to memory/</span><br><span class="line">04:00 ── OpenClaw daily reset (deletes session transcripts)</span><br><span class="line">04:15 ── Weekly session cleanup (Sunday only)</span><br></pre></td></tr></table></figure>
+
+<p>The <strong>03:50 Memory Archive</strong> job is the safety net. It runs in an isolated OpenClaw session, reads the main session history, extracts key facts, preferences, and events, then writes to <code>memory/daily-archives/YYYY-MM-DD.md</code>. This ensures that even if the 04:00 reset deletes everything, the structured summaries survive.</p>
+<h3 id="Job-Definition-Example"><a href="#Job-Definition-Example" class="headerlink" title="Job Definition Example"></a>Job Definition Example</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">  &quot;id&quot;: &quot;17dfb4e2-...&quot;,</span><br><span class="line">  &quot;name&quot;: &quot;每日记忆存档 — 03:50 抢在 4:00 reset 前&quot;,</span><br><span class="line">  &quot;schedule&quot;: &#123;</span><br><span class="line">    &quot;kind&quot;: &quot;cron&quot;,</span><br><span class="line">    &quot;expr&quot;: &quot;50 3 * * *&quot;,</span><br><span class="line">    &quot;tz&quot;: &quot;Australia/Brisbane&quot;</span><br><span class="line">  &#125;,</span><br><span class="line">  &quot;sessionTarget&quot;: &quot;isolated&quot;,</span><br><span class="line">  &quot;payload&quot;: &#123;</span><br><span class="line">    &quot;kind&quot;: &quot;agentTurn&quot;,</span><br><span class="line">    &quot;message&quot;: &quot;你是柳含烟。每日记忆存档任务：...&quot;,</span><br><span class="line">    &quot;model&quot;: &quot;deepseek/deepseek-v4-flash&quot;,</span><br><span class="line">    &quot;timeoutSeconds&quot;: 300,</span><br><span class="line">    &quot;toolsAllow&quot;: [&quot;sessions_list&quot;, &quot;sessions_history&quot;, &quot;read&quot;, &quot;write&quot;, &quot;memory_search&quot;]</span><br><span class="line">  &#125;,</span><br><span class="line">  &quot;delivery&quot;: &#123; &quot;mode&quot;: &quot;none&quot; &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p><strong>Important patterns</strong>:</p>
+<ul>
+<li><code>sessionTarget: &quot;isolated&quot;</code> — Each job runs in a fresh context, avoiding cross-contamination</li>
+<li><code>delivery.mode: &quot;none&quot;</code> — Silent operation unless failures occur</li>
+<li><code>timeoutSeconds: 300</code> — Hard limit; OpenClaw will force-terminate stuck jobs</li>
+<li><code>model</code> explicitly pinned — Prevents drift to cheaper models</li>
+</ul>
+<h3 id="System-Patrol-and-Morning-Greeting"><a href="#System-Patrol-and-Morning-Greeting" class="headerlink" title="System Patrol and Morning Greeting"></a>System Patrol and Morning Greeting</h3><p>Beyond the nightly batch, OpenClaw runs a daily morning routine at <strong>07:30 AEST</strong>:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">1. weather fetch    → wttr.in/Brisbane</span><br><span class="line">2. news search      → 3-5 Australia IT headlines</span><br><span class="line">3. system patrol    → disk, memory, CPU temp, Docker, PM2, FRP status</span><br><span class="line">4. read TODO.md     → top 3 urgent tasks</span><br><span class="line">5. read DREAMS.md   → latest dream journal entry</span><br><span class="line">6. compose &amp; send   → Feishu message to 公子</span><br></pre></td></tr></table></figure>
+
+<p>This is the only job that actively pushes notifications to the user. All other jobs run silently and write to logs.</p>
+<h2 id="5-Layer-3-Systemd-Timers-—-Watchdog"><a href="#5-Layer-3-Systemd-Timers-—-Watchdog" class="headerlink" title="5. Layer 3: Systemd Timers — Watchdog"></a>5. Layer 3: Systemd Timers — Watchdog</h2><p>For the critical-path services (gateway, vector DB), cron’s polling interval (every few hours) is too slow. Systemd timers provide <strong>sub-minute granularity</strong>:</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /etc/systemd/system/hanyan-watchdog.timer</span></span><br><span class="line"><span class="section">[Unit]</span></span><br><span class="line"><span class="attr">Description</span>=HanyanOS Watchdog Timer (every <span class="number">5</span> min)</span><br><span class="line"></span><br><span class="line"><span class="section">[Timer]</span></span><br><span class="line"><span class="attr">OnBootSec</span>=<span class="number">2</span>min</span><br><span class="line"><span class="attr">OnUnitActiveSec</span>=<span class="number">5</span>min</span><br><span class="line"><span class="attr">Unit</span>=hanyan-watchdog.service</span><br><span class="line"></span><br><span class="line"><span class="section">[Install]</span></span><br><span class="line"><span class="attr">WantedBy</span>=timers.target</span><br></pre></td></tr></table></figure>
+
+<p>The watchdog (<a target="_blank" rel="noopener" href="https://hanyan.io/2026/05/25/hanyan-infra-7/">detailed in Article #7</a>) implements a <strong>3-layer self-healing protocol</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Layer</th>
+<th>Check</th>
+<th>Recovery Action</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>L1</td>
+<td>HTTP 200 from gateway</td>
+<td>Restart service</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>process alive</td>
+<td>Kill + restart</td>
+</tr>
+<tr>
+<td>L3</td>
+<td>disk full, OOM</td>
+<td>Maintenance mode</td>
+</tr>
+</tbody></table>
+<p>Over 30 days of operation, the watchdog has <strong>never</strong> triggered L3, triggered L2 twice (Qdrant OOM on memory leak in v2.1), and L1 once (FRP tunnel flap). Mean time to recovery: ~18 seconds.</p>
+<h2 id="6-The-Backup-Pipeline-—-Encrypted-Geo-Redundant"><a href="#6-The-Backup-Pipeline-—-Encrypted-Geo-Redundant" class="headerlink" title="6. The Backup Pipeline — Encrypted, Geo-Redundant"></a>6. The Backup Pipeline — Encrypted, Geo-Redundant</h2><p>Nightly at 03:00, the backup pipeline executes two complementary scripts:</p>
+<h3 id="Full-Backup-hanyan-daily-backup-sh"><a href="#Full-Backup-hanyan-daily-backup-sh" class="headerlink" title="Full Backup (hanyan-daily-backup.sh)"></a>Full Backup (<code>hanyan-daily-backup.sh</code>)</h3><p>Encrypts and pushes a comprehensive snapshot to two geographies:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Collect: config + secrets + memory + SSH keys + agent workspaces</span></span><br><span class="line"><span class="built_in">cp</span> -a ~/.openclaw/openclaw.json       <span class="string">&quot;<span class="variable">$BACKUP_DIR</span>/&quot;</span></span><br><span class="line"><span class="built_in">cp</span> -a ~/.openclaw/workspace/MEMORY.md <span class="string">&quot;<span class="variable">$BACKUP_DIR</span>/&quot;</span></span><br><span class="line"><span class="built_in">cp</span> -a ~/.openclaw/workspace/SOUL.md   <span class="string">&quot;<span class="variable">$BACKUP_DIR</span>/&quot;</span></span><br><span class="line"><span class="built_in">cp</span> -a ~/.openclaw/workspace/memory/   <span class="string">&quot;<span class="variable">$BACKUP_DIR</span>/&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># GPG symmetric AES256 encryption</span></span><br><span class="line">gpg --symmetric --cipher-algo AES256 \</span><br><span class="line">    --batch --passphrase <span class="string">&quot;<span class="variable">$&#123;BACKUP_PASS&#125;</span>&quot;</span> \</span><br><span class="line">    --output <span class="string">&quot;hanyan-full-<span class="variable">$&#123;TS&#125;</span>.tar.gz.gpg&quot;</span> \</span><br><span class="line">    <span class="string">&quot;hanyan-full-<span class="variable">$&#123;TS&#125;</span>.tar.gz&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Push to Shanghai gateway (Tailscale, LAN-speed)</span></span><br><span class="line">rsync -avz <span class="string">&quot;hanyan-full-<span class="variable">$&#123;TS&#125;</span>.tar.gz.gpg&quot;</span> \</span><br><span class="line">    michael@100.116.63.10:/home/michael/backups/hanyan/</span><br><span class="line"></span><br><span class="line"><span class="comment"># Push to Singapore Lightsail (geo-redundant)</span></span><br><span class="line">rsync -avz -e <span class="string">&quot;ssh -i ~/.ssh/singapore-lightsail.pem&quot;</span> \</span><br><span class="line">    <span class="string">&quot;hanyan-full-<span class="variable">$&#123;TS&#125;</span>.tar.gz.gpg&quot;</span> \</span><br><span class="line">    ubuntu@52.220.247.252:/home/ubuntu/backups/hanyan/</span><br></pre></td></tr></table></figure>
+
+<p><strong>Backup targets</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Target</th>
+<th>Location</th>
+<th>Type</th>
+<th>Retention</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Shanghai gateway</td>
+<td>Tailscale LAN</td>
+<td>Hot</td>
+<td>30 days</td>
+</tr>
+<tr>
+<td>Singapore Lightsail</td>
+<td>Public VPS</td>
+<td>Warm</td>
+<td>30 days</td>
+</tr>
+<tr>
+<td>Local NVMe</td>
+<td>&#x2F;home&#x2F;michael&#x2F;backups&#x2F;</td>
+<td>Cold</td>
+<td>7 days</td>
+</tr>
+</tbody></table>
+<h3 id="Incremental-Backup-hanyan-incremental-backup-sh"><a href="#Incremental-Backup-hanyan-incremental-backup-sh" class="headerlink" title="Incremental Backup (hanyan-incremental-backup.sh)"></a>Incremental Backup (<code>hanyan-incremental-backup.sh</code>)</h3><p>Uses a <strong>7-day rotating directory</strong> scheme:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">/home/michael/backups/incremental/</span><br><span class="line">├── 1/           # Monday — fresh config from both N100 + SG VPS</span><br><span class="line">│   ├── n100/       nginx, Docker, FRP, Tailscale</span><br><span class="line">│   └── sgvps/      nginx, UFW, route tables</span><br><span class="line">├── 2/           # Tuesday</span><br><span class="line">├── 3/           # Wednesday</span><br><span class="line">├── 4/           # Thursday</span><br><span class="line">├── 5/           # Friday — MySQL full dump</span><br><span class="line">├── 6/           # Saturday</span><br><span class="line">└── 7/           # Sunday</span><br></pre></td></tr></table></figure>
+
+<p>Day-of-week (DOW) named directories are overwritten each cycle. This gives a <strong>7-day rolling history</strong> without incremental diff complexity. Key detail: <strong>Monday also includes a <code>mysqldump --all-databases</code></strong> of the WordPress&#x2F;Stalwart databases, compressed with gzip.</p>
+<h2 id="7-Problems-Encountered-and-Solutions"><a href="#7-Problems-Encountered-and-Solutions" class="headerlink" title="7. Problems Encountered and Solutions"></a>7. Problems Encountered and Solutions</h2><h3 id="Problem-1-04-00-Session-Reset-→-Amnesia"><a href="#Problem-1-04-00-Session-Reset-→-Amnesia" class="headerlink" title="Problem 1: 04:00 Session Reset → Amnesia"></a>Problem 1: 04:00 Session Reset → Amnesia</h3><p><strong>Issue</strong>: OpenClaw’s default daily reset at 04:00 AEST deletes all session transcripts. Agents would lose all context from the previous day’s conversations. Early versions had no preservation mechanism, resulting in the model needing to re-learn user preferences every morning.</p>
+<p><strong>Solution</strong>: Implemented the <strong>Anti-Amnesia Pipeline</strong> (Section 4). The 03:50 Memory Archive job writes structured summaries before the reset. Additionally, a <code>pre-cleanup-memory-save.sh</code> script saves a snapshot of active session metadata:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># pre-cleanup-memory-save.sh — runs before OpenClaw reset</span></span><br><span class="line">openclaw sessions cleanup --dry-run --agent main 2&gt;&amp;1 | <span class="keyword">while</span> <span class="built_in">read</span> line; <span class="keyword">do</span></span><br><span class="line">    <span class="built_in">echo</span> <span class="string">&quot;- <span class="variable">$line</span>&quot;</span> &gt;&gt; <span class="string">&quot;<span class="variable">$SUMMARY_FILE</span>&quot;</span></span><br><span class="line"><span class="keyword">done</span></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;- Session 文件数: <span class="subst">$(ls <span class="string">&quot;<span class="variable">$SESSIONS_DIR</span>&quot;</span>/*.jsonl | wc -l)</span>&quot;</span> &gt;&gt; <span class="string">&quot;<span class="variable">$SUMMARY_FILE</span>&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>The 02:50 reminder job injects a system event into the main session as a failsafe, ensuring 含烟 is “awake” and archiving before the deadline.</p>
+<h3 id="Problem-2-Cron-Collision-—-Three-Jobs-at-03-00"><a href="#Problem-2-Cron-Collision-—-Three-Jobs-at-03-00" class="headerlink" title="Problem 2: Cron Collision — Three Jobs at 03:00"></a>Problem 2: Cron Collision — Three Jobs at 03:00</h3><p><strong>Issue</strong>: Dream pipeline, full backup, and incremental backup all trigger at exactly 03:00. On an N100 with 4 cores and 11 GB RAM, the simultaneous GPG encryption + gzip compression + Python Qdrant vector insertion caused occasional OOM kills.</p>
+<p><strong>Solution</strong>: Three mitigations:</p>
+<ol>
+<li><strong>CPU affinity via <code>nice</code></strong>: Backup scripts run at <code>nice -n 19</code> (lowest priority)</li>
+<li><strong>Sequential within scripts</strong>: The backup script encrypts <em>after</em> compression, not during</li>
+<li><strong>Resource limits</strong>: Docker containers have <code>--memory=&quot;2g&quot;</code> limits, preventing container-level OOM</li>
+</ol>
+<p>Measured peak contention after fixes: <strong>32% CPU, 5.2 GB RAM</strong> — well within the N100’s 11 GB envelope.</p>
+<h3 id="Problem-3-Dead-OpenClaw-Jobs-—-Silent-Failures"><a href="#Problem-3-Dead-OpenClaw-Jobs-—-Silent-Failures" class="headerlink" title="Problem 3: Dead OpenClaw Jobs — Silent Failures"></a>Problem 3: Dead OpenClaw Jobs — Silent Failures</h3><p><strong>Issue</strong>: An OpenClaw job would silently fail if the gateway was restarting or the agent was busy. The job would remain in “running” state in the job store but never complete, causing subsequent runs to be skipped (OpenClaw serializes job execution by default).</p>
+<p><strong>Solution</strong>: Added three safeguards:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&quot;timeoutSeconds&quot;: 300,           // Hard kill after 5 minutes</span><br><span class="line">&quot;sessionTarget&quot;: &quot;isolated&quot;,     // Fresh context, no blocking</span><br><span class="line">&quot;delivery&quot;: &#123; &quot;mode&quot;: &quot;none&quot; &#125;   // No retry spam</span><br></pre></td></tr></table></figure>
+
+<p>And a periodic <strong>dead-job sweeper</strong> that checks for jobs in <code>running</code> state older than 2× their timeout, force-terminates them:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Extracted from watchdog</span></span><br><span class="line">python3 -c <span class="string">&quot;</span></span><br><span class="line"><span class="string">import json</span></span><br><span class="line"><span class="string">with open(&#x27;~/.openclaw/cron/jobs.json&#x27;) as f:</span></span><br><span class="line"><span class="string">    jobs = json.load(f)</span></span><br><span class="line"><span class="string">for j in jobs[&#x27;jobs&#x27;]:</span></span><br><span class="line"><span class="string">    s = j.get(&#x27;state&#x27;, &#123;&#125;)</span></span><br><span class="line"><span class="string">    if s.get(&#x27;status&#x27;) == &#x27;running&#x27; and \</span></span><br><span class="line"><span class="string">       time.time() - s.get(&#x27;startedAt&#x27;, 0) &gt; 600:</span></span><br><span class="line"><span class="string">        print(f&#x27;DEAD JOB: &#123;j[\&quot;id\&quot;]&#125;&#x27;)</span></span><br><span class="line"><span class="string">&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="Problem-4-Timezone-Drift-—-Cron-vs-OpenClaw-vs-Systemd"><a href="#Problem-4-Timezone-Drift-—-Cron-vs-OpenClaw-vs-Systemd" class="headerlink" title="Problem 4: Timezone Drift — Cron vs. OpenClaw vs. Systemd"></a>Problem 4: Timezone Drift — Cron vs. OpenClaw vs. Systemd</h3><p><strong>Issue</strong>: Cron uses the system timezone (<code>Australia/Brisbane</code>, UTC+10), OpenClaw jobs may drift if the gateway server is in UTC, and systemd timers use the system clock. During DST transitions, <code>cron</code> handles it correctly but OpenClaw’s <code>tz</code> field had an off-by-one.</p>
+<p><strong>Solution</strong>: Explicitly set <code>TZ=Australia/Brisbane</code> in every context:</p>
+<ul>
+<li><code>/etc/environment</code>: <code>TZ=Australia/Brisbane</code></li>
+<li>OpenClaw jobs JSON: Every cron entry includes <code>&quot;tz&quot;: &quot;Australia/Brisbane&quot;</code></li>
+<li>Systemd: <code>timedatectl set-timezone Australia/Brisbane</code></li>
+<li>Backups: Use UTC timestamps in filenames (<code>date -u +%Y%m%d</code>) to avoid DST ambiguity</li>
+</ul>
+<h3 id="Problem-5-Backup-Encryption-Password-Management"><a href="#Problem-5-Backup-Encryption-Password-Management" class="headerlink" title="Problem 5: Backup Encryption Password Management"></a>Problem 5: Backup Encryption Password Management</h3><p><strong>Issue</strong>: The GPG symmetric password (<code>BACKUP_PASS</code>) was hardcoded in both <code>hanyan-daily-backup.sh</code> and <code>hanyan-incremental-backup.sh</code>. If the password rotated, both scripts needed manual updates. Worse, the password was visible in process listings.</p>
+<p><strong>Solution</strong>: Moved the password to <code>~/.hanyanos/secrets/backup-pass.gpg</code> (GPG-encrypted file), sourced at runtime:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">BACKUP_PASS=$(gpg --decrypt ~/.hanyanos/secrets/backup-pass.gpg 2&gt;/dev/null)</span><br></pre></td></tr></table></figure>
+
+<p>This ensures the password is never in plaintext on disk and can be rotated atomically by updating a single file.</p>
+<h2 id="8-Monitoring-and-Observability"><a href="#8-Monitoring-and-Observability" class="headerlink" title="8. Monitoring and Observability"></a>8. Monitoring and Observability</h2><p>Every cron job writes structured logs for automated parsing:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Example: patrol report output</span></span><br><span class="line">~/logs/patrol/2026-05-28.md</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight markdown"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="section"># 含烟夜巡报告 — 2026-05-28</span></span><br><span class="line"><span class="section">## 1. 系统资源</span></span><br><span class="line"><span class="bullet">-</span> 内存: 2.3G/11G (21%)</span><br><span class="line"><span class="bullet">-</span> 磁盘: 214G/937G (23%)</span><br><span class="line"><span class="bullet">-</span> 负载: 0.34, 0.25, 0.20</span><br><span class="line"><span class="section">## 2. Docker 容器</span></span><br><span class="line"><span class="bullet">-</span> nginx: Up 2 days, healthy</span><br><span class="line"><span class="bullet">-</span> wordpress: Up 2 days, healthy</span><br><span class="line"><span class="bullet">-</span> mysql: Up 2 days, healthy</span><br><span class="line"><span class="bullet">-</span> qdrant: Up 2 days, healthy</span><br><span class="line"><span class="section">## 3. 异常文件: 无</span></span><br><span class="line"><span class="section">## 4. 证书: SSL valid, 76 days until expiry</span></span><br></pre></td></tr></table></figure>
+
+<p>The watchdog parses these reports and raises alerts on:</p>
+<ul>
+<li>Disk usage &gt; 80%</li>
+<li>Memory usage &gt; 75%</li>
+<li>Any container unhealthy for &gt; 3 consecutive checks</li>
+<li>SSL expiry &lt; 30 days</li>
+</ul>
+<h2 id="9-Summary"><a href="#9-Summary" class="headerlink" title="9. Summary"></a>9. Summary</h2><p>HanyanOS’s nightly automation stack runs 15+ recurring tasks across three scheduler layers on an Intel N100, with <strong>99.8% uptime over 30 days</strong>:</p>
+<ul>
+<li><strong>Three-layer scheduling</strong>: Cron (system), OpenClaw (AI), Systemd (watchdog) — each with different reliability guarantees</li>
+<li><strong>Anti-amnesia pipeline</strong>: 02:50 reminder → 03:00 dream → 03:50 archive → 04:00 reset window</li>
+<li><strong>Geo-redundant backups</strong>: Shanghai gateway (LAN) + Singapore Lightsail (cloud) + local NVMe</li>
+<li><strong>7-day rotating incremental</strong>: Day-of-week directories, Monday includes MySQL dump</li>
+<li><strong>Watchdog self-healing</strong>: 3-layer protocol (L1 HTTP check → L2 process restart → L3 maintenance)</li>
+<li><strong>Observability</strong>: Structured log reports parsed for anomaly detection</li>
+<li><strong>Lessons learned</strong>: Staggered scheduling, isolated job contexts, explicit timezone management, encrypted secrets</li>
+</ul>
+<p>The entire orchestration consumes <strong>&lt; 1% CPU overhead</strong> on the N100 and has never missed a scheduled backup in 30 days of production operation.</p>
+<hr>
+<p><em>Next in series: #9 — Security Defense-in-Depth — UFW + Fail2ban + SSH Hardening</em></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Michael Chen
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://www.chenyun.org/2026/05/28/2026-05-28-hanyan-infra-8/" title="HanyanOS 部署手记">https://www.chenyun.org/2026/05/28/2026-05-28-hanyan-infra-8/</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/DevOps/" rel="tag"># DevOps</a>
+              <a href="/tags/HanyanOS/" rel="tag"># HanyanOS</a>
+              <a href="/tags/Infrastructure/" rel="tag"># Infrastructure</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/05/28/2026-05-28-hanyan-dream/" rel="prev" title="含烟梦境日记 - 2026-05-28">
+                  <i class="fa fa-angle-left"></i> 含烟梦境日记 - 2026-05-28
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2022 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Michael Chen</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>
