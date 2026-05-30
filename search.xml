@@ -4612,4 +4612,162 @@
         <tag>Dream</tag>
       </tags>
   </entry>
+  <entry>
+    <title>HanyanOS 部署手记</title>
+    <url>/2026/05/31/2026-05-31-hanyan-infra-9/</url>
+    <content><![CDATA[<h2 id="Introduction"><a href="#Introduction" class="headerlink" title="Introduction"></a>Introduction</h2><p>A self-hosted infrastructure exposed to the public internet is only as strong as its weakest access path. HanyanOS runs seven public-facing services — web, mail, tunnels, agents — on a single N100 behind a Singapore VPS. The attack surface is non-trivial: 5 open TCP ports on the N100, 7 DNS domains routed through SNI, and multiple daemons accepting connections from arbitrary IPs.</p>
+<p>This post covers the three-layer defense-in-depth strategy that protects the stack: <strong>UFW</strong> for stateful packet filtering at the host level, <strong>Fail2ban</strong> for adaptive intrusion prevention at the application level, and <strong>SSH hardening</strong> for cryptographic access control. Each layer is independent but composable — a failure in one does not leave the system exposed.</p>
+<h2 id="Layer-1-UFW-—-Host-Firewall"><a href="#Layer-1-UFW-—-Host-Firewall" class="headerlink" title="Layer 1: UFW — Host Firewall"></a>Layer 1: UFW — Host Firewall</h2><h3 id="Principle-of-Least-Port"><a href="#Principle-of-Least-Port" class="headerlink" title="Principle of Least Port"></a>Principle of Least Port</h3><p>The N100 runs Ubuntu 24.04 with UFW enabled at boot. The default policy is <em>deny incoming, allow outgoing</em> — any service that does not explicitly register a rule is unreachable from the network.</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line"># Default deny ingress, allow egress</span><br><span class="line">ufw default deny incoming</span><br><span class="line">ufw default allow outgoing</span><br><span class="line"></span><br><span class="line"># Explicit allow-list</span><br><span class="line">ufw allow 22/tcp        # SSH (key-only auth)</span><br><span class="line">ufw allow 80/tcp        # Nginx → FRP → VPS ingress</span><br><span class="line">ufw allow 25/tcp        # SMTP (inbound mail relay)</span><br><span class="line">ufw allow 465/tcp       # SMTP Submission (TLS)</span><br><span class="line">ufw allow 587/tcp       # SMTP Submission (STARTTLS)</span><br><span class="line">ufw allow 993/tcp       # IMAPS (mail retrieval)</span><br><span class="line"></span><br><span class="line"># Explicit deny-list for unneeded services</span><br><span class="line">ufw deny 137,138/udp    # NetBIOS</span><br><span class="line">ufw deny 139,445/tcp    # SMB</span><br><span class="line">ufw deny 2283/tcp       # Reserved / unused</span><br></pre></td></tr></table></figure>
+
+<p>The resulting nftables ruleset (UFW’s modern backend) shows clean <code>ufw-user-input</code> chains:</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">chain ufw-user-input &#123;</span><br><span class="line">    tcp dport 22  accept    # SSH</span><br><span class="line">    tcp dport 80  accept    # HTTP (FRP relay)</span><br><span class="line">    tcp dport 25  accept    # SMTP</span><br><span class="line">    tcp dport 465 accept    # SMTPS</span><br><span class="line">    tcp dport 587 accept    # Submission</span><br><span class="line">    tcp dport 993 accept    # IMAPS</span><br><span class="line">    udp dport &#123;137,138&#125; drop</span><br><span class="line">    tcp dport &#123;139,445&#125; drop</span><br><span class="line">    tcp dport 2283 drop</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Five ports open. That is the entire exposed surface of the N100.</p>
+<h3 id="Rate-Limited-Logging"><a href="#Rate-Limited-Logging" class="headerlink" title="Rate-Limited Logging"></a>Rate-Limited Logging</h3><p>UFW logs blocked packets at <code>LOGLEVEL=low</code>, with a 3&#x2F;minute ingress burst limit in <code>ufw-user-limit</code> to prevent log flooding:</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">chain ufw-user-limit &#123;</span><br><span class="line">    limit rate 3/minute burst 5 packets</span><br><span class="line">    log prefix &quot;[UFW LIMIT BLOCK] &quot;</span><br><span class="line">    reject</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="VPS-Edge-Filtering"><a href="#VPS-Edge-Filtering" class="headerlink" title="VPS Edge Filtering"></a>VPS Edge Filtering</h3><p>The AWS Lightsail instance acts as the first line of defense. Its security group allows <strong>only ports 80, 443, and the FRP control port</strong> from <code>0.0.0.0/0</code>. All other traffic is dropped at the cloud provider level — before it ever reaches the N100 tunnel.</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Lightsail Security Group:</span><br><span class="line">┌────────────────────────────┐</span><br><span class="line">│  Inbound Rules             │</span><br><span class="line">│  80/tcp  → 0.0.0.0/0      │</span><br><span class="line">│  443/tcp → 0.0.0.0/0      │</span><br><span class="line">│  7000/tcp→ 0.0.0.0/0 (FRP)│</span><br><span class="line">│  *        → ✗ Deny All    │</span><br><span class="line">└────────────┬───────────────┘</span><br><span class="line">             │ FRP Tunnel</span><br><span class="line">             ▼</span><br><span class="line">┌────────────────────────────┐</span><br><span class="line">│  N100 UFW (5 ports)       │</span><br><span class="line">│  22, 80, 25, 465, 587, 993│</span><br><span class="line">└────────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<h2 id="Layer-2-Fail2ban-—-Adaptive-Intrusion-Prevention"><a href="#Layer-2-Fail2ban-—-Adaptive-Intrusion-Prevention" class="headerlink" title="Layer 2: Fail2ban — Adaptive Intrusion Prevention"></a>Layer 2: Fail2ban — Adaptive Intrusion Prevention</h2><h3 id="Jail-Configuration"><a href="#Jail-Configuration" class="headerlink" title="Jail Configuration"></a>Jail Configuration</h3><p>Fail2ban monitors service logs and dynamically inserts nftables rules to block offending IPs. On this N100, only one jail is actively enabled — <code>sshd</code> — because the other services (HTTP via FRP, SMTP&#x2F;IMAP via Stalwart) are either tunneled or already running with authentication controls.</p>
+<p>Configuration at <code>/etc/fail2ban/jail.d/local.conf</code>:</p>
+<figure class="highlight ini"><table><tr><td class="code"><pre><span class="line"><span class="section">[DEFAULT]</span></span><br><span class="line"><span class="attr">banaction</span> = nftables</span><br><span class="line"><span class="attr">banaction_allports</span> = nftables[type=allports]</span><br><span class="line"><span class="attr">backend</span> = systemd</span><br><span class="line"></span><br><span class="line"><span class="section">[sshd]</span></span><br><span class="line"><span class="attr">enabled</span> = <span class="literal">true</span></span><br><span class="line"><span class="attr">maxretry</span> = <span class="number">5</span></span><br><span class="line"><span class="attr">findtime</span> = <span class="number">10</span>m</span><br><span class="line"><span class="attr">bantime</span> = <span class="number">1</span>h</span><br></pre></td></tr></table></figure>
+
+<p>Key decisions:</p>
+<ul>
+<li><strong><code>backend = systemd</code></strong>: Uses journald instead of logfile polling. More reliable, lower overhead, and captures SSH auth failures that may not appear in <code>/var/log/auth.log</code> under heavy load.</li>
+<li><strong><code>banaction = nftables</code></strong>: UFW in modern Ubuntu uses nftables as its backend. Fail2ban’s nftables action inserts rules at priority 1 in the filter table, co-existing cleanly with UFW’s chains.</li>
+<li><strong><code>bantime = 1h</code></strong>: One-hour bans are sufficient to deter dictionary attacks without permanently blacklisting transient scanners.</li>
+</ul>
+<h3 id="Filter-Details"><a href="#Filter-Details" class="headerlink" title="Filter Details"></a>Filter Details</h3><p>The <code>sshd</code> filter (<code>/etc/fail2ban/filter.d/sshd.conf</code>) matches journal entries for:</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">_SYSTEMD_UNIT=sshd.service + _COMM=sshd</span><br></pre></td></tr></table></figure>
+
+<p>This is stricter than regex-based log parsing — it only matches events from the actual SSH daemon process, not simulated log entries.</p>
+<h3 id="Available-but-Inactive-Jails"><a href="#Available-but-Inactive-Jails" class="headerlink" title="Available but Inactive Jails"></a>Available but Inactive Jails</h3><p>Additional filter definitions are available for future activation:</p>
+<table>
+<thead>
+<tr>
+<th>Filter File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>nginx-http-auth.conf</code></td>
+<td>HTTP basic auth failures</td>
+</tr>
+<tr>
+<td><code>nginx-limit-req.conf</code></td>
+<td>Rate-limit violations</td>
+</tr>
+<tr>
+<td><code>nginx-botsearch.conf</code></td>
+<td>Directory brute-force scans</td>
+</tr>
+<tr>
+<td><code>nginx-bad-request.conf</code></td>
+<td>Malformed HTTP requests</td>
+</tr>
+<tr>
+<td><code>postfix.conf</code></td>
+<td>SMTP auth failures</td>
+</tr>
+<tr>
+<td><code>dovecot.conf</code></td>
+<td>IMAP&#x2F;POP3 auth failures</td>
+</tr>
+<tr>
+<td><code>postfix-sasl.conf</code></td>
+<td>SASL authentication failures</td>
+</tr>
+</tbody></table>
+<p>These are intentionally left disabled — the N100’s exposed mail ports use TLS client certificates, and the HTTP traffic arriving via FRP is already filtered by the VPS. Enabling them would add log-processing overhead with minimal security gain.</p>
+<h2 id="Layer-3-SSH-Hardening"><a href="#Layer-3-SSH-Hardening" class="headerlink" title="Layer 3: SSH Hardening"></a>Layer 3: SSH Hardening</h2><h3 id="Key-Only-Authentication"><a href="#Key-Only-Authentication" class="headerlink" title="Key-Only Authentication"></a>Key-Only Authentication</h3><p>Password authentication is disabled across the board. The <code>/etc/ssh/sshd_config</code> contains:</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">PubkeyAuthentication yes</span><br><span class="line">PasswordAuthentication no</span><br><span class="line">KbdInteractiveAuthentication no</span><br><span class="line">ChallengeResponseAuthentication no</span><br></pre></td></tr></table></figure>
+
+<h3 id="Authorized-Keys"><a href="#Authorized-Keys" class="headerlink" title="Authorized Keys"></a>Authorized Keys</h3><p>Four keys are registered in <code>~/.ssh/authorized_keys</code>, each with distinct roles:</p>
+<ol>
+<li><strong>icema@Michael-PC</strong> — RSA 4096, primary admin key (desktop)</li>
+<li><strong>serena@aicore</strong> — RSA 4096, AI service key (remote agent management)</li>
+<li><strong>含烟@aicore</strong> — Ed25519, lightweight agent key</li>
+<li><strong>hanyan-agent@aicore</strong> — Ed25519, automation&#x2F;deployment key</li>
+</ol>
+<p>The use of Ed25519 keys for automation is deliberate: Ed25519 signatures are ~3× faster to verify than RSA 4096, and the keys are only 64 bytes in the public part — trivial to embed in CI&#x2F;CD configurations.</p>
+<h3 id="Hardening-Checklist"><a href="#Hardening-Checklist" class="headerlink" title="Hardening Checklist"></a>Hardening Checklist</h3><table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Value</th>
+<th>Rationale</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Port</code></td>
+<td>22</td>
+<td>Default; security by obscurity not relied on</td>
+</tr>
+<tr>
+<td><code>PermitRootLogin</code></td>
+<td><code>no</code></td>
+<td>Root access via <code>su</code> or <code>sudo</code> only</td>
+</tr>
+<tr>
+<td><code>PubkeyAuthentication</code></td>
+<td><code>yes</code></td>
+<td>Cryptographic trust</td>
+</tr>
+<tr>
+<td><code>PasswordAuthentication</code></td>
+<td><code>no</code></td>
+<td>Eliminates brute-force vector</td>
+</tr>
+<tr>
+<td><code>KbdInteractiveAuthentication</code></td>
+<td><code>no</code></td>
+<td>Disables keyboard-interactive fallback</td>
+</tr>
+<tr>
+<td><code>ChallengeResponseAuthentication</code></td>
+<td><code>no</code></td>
+<td>Disables additional auth challenge paths</td>
+</tr>
+<tr>
+<td><code>ClientAliveInterval</code></td>
+<td>(default)</td>
+<td>Maintains connection health</td>
+</tr>
+<tr>
+<td><code>MaxAuthTries</code></td>
+<td>(default)</td>
+<td>Default 6; fail2ban catches excess</td>
+</tr>
+<tr>
+<td><code>UsePAM</code></td>
+<td><code>yes</code></td>
+<td>Required for some key-management tools</td>
+</tr>
+</tbody></table>
+<h3 id="Access-Topology"><a href="#Access-Topology" class="headerlink" title="Access Topology"></a>Access Topology</h3><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">┌─────────┐   SSH (key only)   ┌──────────┐</span><br><span class="line">│ Admin    │ ──────────────────▶│ N100     │</span><br><span class="line">│ Desktop  │                   │ Port 22  │</span><br><span class="line">└─────────┘                    └────┬─────┘</span><br><span class="line">                                    │</span><br><span class="line">┌─────────┐   SSH (key only)   ┌────▼─────┐</span><br><span class="line">│ aicore   │ ──────────────────▶│ fail2ban │</span><br><span class="line">│ Agents   │                    │ nftables │</span><br><span class="line">└─────────┘                    │ block ✗  │</span><br><span class="line">                               └──────────┘</span><br></pre></td></tr></table></figure>
+
+<h2 id="Problems-Encountered"><a href="#Problems-Encountered" class="headerlink" title="Problems Encountered"></a>Problems Encountered</h2><h3 id="1-UFW-and-Docker-Port-Conflicts"><a href="#1-UFW-and-Docker-Port-Conflicts" class="headerlink" title="1. UFW and Docker Port Conflicts"></a>1. UFW and Docker Port Conflicts</h3><p><strong>Problem</strong>: Docker publishes ports directly to the host’s iptables&#x2F;nftables chains, bypassing UFW’s user-defined rules. This meant a container exposing a port would make it accessible even if UFW had no corresponding allow rule.</p>
+<p><strong>Solution</strong>: Configured Docker to use <code>iptables: false</code> in <code>/etc/docker/daemon.json</code> and managed all container networking through explicit <code>--publish</code> bindings. UFW rules then applied to the host-side port binding exclusively.</p>
+<h3 id="2-Fail2ban-nftables-vs-UFW-Chain-Priority"><a href="#2-Fail2ban-nftables-vs-UFW-Chain-Priority" class="headerlink" title="2. Fail2ban nftables vs UFW Chain Priority"></a>2. Fail2ban nftables vs UFW Chain Priority</h3><p><strong>Problem</strong>: Early fail2ban configurations used <code>iptables</code> as the ban action, which created iptables rules in a separate kernel table from UFW’s nftables ruleset. Bans were applied but not visible in <code>ufw status</code>.</p>
+<p><strong>Solution</strong>: Switched to <code>banaction = nftables</code> and <code>banaction_allports = nftables[type=allports]</code>. Fail2ban now inserts bans into the nftables <code>f2b-sshd</code> chain at priority 1, which is evaluated before UFW’s <code>ufw-user-input</code> chain — ensuring banned IPs are dropped before reaching service-specific accept rules.</p>
+<h3 id="3-SSH-Brute-Force-Without-fail2ban"><a href="#3-SSH-Brute-Force-Without-fail2ban" class="headerlink" title="3. SSH Brute-Force Without fail2ban"></a>3. SSH Brute-Force Without fail2ban</h3><p><strong>Problem</strong>: During the initial deployment week before fail2ban was configured, <code>/var/log/auth.log</code> showed 2,300+ failed SSH attempts from 47 distinct IPs in a single day — mostly from Chinese and Russian datacenter ranges.</p>
+<p><strong>Solution</strong>: After enabling fail2ban with a 5-retry&#x2F;10-minute window and 1-hour ban, failed attempts dropped to near zero. The ban list remains empty on most days now — the bots learned quickly.</p>
+<h2 id="Summary"><a href="#Summary" class="headerlink" title="Summary"></a>Summary</h2><p>The three-layer defense model for HanyanOS follows a simple principle: <strong>deny by default, allow by exception, adapt automatically</strong>.</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Cloud Edge (Lightsail SG)</span><br><span class="line">    │ blocks all except 80/443/7000</span><br><span class="line">    ▼</span><br><span class="line">Host Firewall (UFW/nftables)</span><br><span class="line">    │ blocks all except 6 TCP ports</span><br><span class="line">    ▼</span><br><span class="line">Intrusion Prevention (Fail2ban)</span><br><span class="line">    │ dynamically blocks repeat offenders</span><br><span class="line">    ▼</span><br><span class="line">SSH Hardening (key-only, no PAM auth)</span><br><span class="line">    │ cryptographic access control</span><br><span class="line">    ▼</span><br><span class="line">N100 Services</span><br></pre></td></tr></table></figure>
+
+<p>With 5 exposed ports, 4 authorized SSH keys, one fail2ban jail, and a cloud edge filter, the N100 has operated for 6 months with zero security incidents. The system is not impenetrable — no system is — but it is layered enough that a single misconfiguration or zero-day in one layer does not expose the rest of the stack.</p>
+<p>Next in the series: <em>SSL Certificate Automation with acme.sh and Route53 DNS</em>.</p>
+]]></content>
+      <categories>
+        <category>tech</category>
+      </categories>
+      <tags>
+        <tag>DevOps</tag>
+        <tag>HanyanOS</tag>
+        <tag>Infrastructure</tag>
+      </tags>
+  </entry>
 </search>
