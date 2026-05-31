@@ -4770,4 +4770,135 @@
         <tag>Infrastructure</tag>
       </tags>
   </entry>
+  <entry>
+    <title>HanyanOS 部署手记</title>
+    <url>/2026/06/01/2026-06-01-hanyan-infra-10/</url>
+    <content><![CDATA[<h2 id="Introduction"><a href="#Introduction" class="headerlink" title="Introduction"></a>Introduction</h2><p>A self-hosted infrastructure with seven public-facing domains demands robust TLS certificate management. HanyanOS routes traffic for <code>chenyun.org</code>, <code>www.chenyun.org</code>, <code>n8n.chenyun.org</code>, <code>photo.chenyun.org</code>, <code>mail.chenyun.org</code>, <code>hanyan.chenyun.org</code>, and <code>rss.chenyun.org</code> through a single N100 server. Each subdomain requires valid, trusted certificates.</p>
+<p>This post covers the certificate automation pipeline built around <strong>acme.sh</strong> with <strong>AWS Route53 DNS-01 challenge</strong>, enabling wildcard (<code>*.chenyun.org</code>) certificate issuance and fully automated renewal — no open ports, no webroot conflicts, no manual intervention.</p>
+<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">┌─────────────────────────────────────────────────────────────────┐</span><br><span class="line">│                   SSL Certificate Pipeline                       │</span><br><span class="line">├─────────────────────────────────────────────────────────────────┤</span><br><span class="line">│                                                                  │</span><br><span class="line">│  acme.sh ──► AWS Route53 API ──► Let&#x27;s Encrypt ──► ECC Certs    │</span><br><span class="line">│     │                          (DNS-01 Challenge)                │</span><br><span class="line">│     │                                                           │</span><br><span class="line">│     ▼                                                           │</span><br><span class="line">│  /home/michael/.acme.sh/chenyun.org_ecc/                        │</span><br><span class="line">│     │                                                           │</span><br><span class="line">│     ▼ (manual/scripted copy)                                    │</span><br><span class="line">│  /etc/ssl/chenyun/                                              │</span><br><span class="line">│     │                                                           │</span><br><span class="line">│     ▼ (symlink)                                                 │</span><br><span class="line">│  /etc/letsencrypt/live/chenyun.org/  (compat path)              │</span><br><span class="line">│     │                                                           │</span><br><span class="line">│     ▼                                                           │</span><br><span class="line">│  Nginx SNI Proxy (all 7 virtual hosts)                          │</span><br><span class="line">│                                                                  │</span><br><span class="line">└─────────────────────────────────────────────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<h2 id="1-Why-DNS-01-Challenge"><a href="#1-Why-DNS-01-Challenge" class="headerlink" title="1. Why DNS-01 Challenge"></a>1. Why DNS-01 Challenge</h2><p>HTTP-01 challenges require port 80 accessibility and per-domain webroot configuration — problematic for a server behind FRP tunnels where traffic routing can be asymmetrical. TLS-ALPN-01 requires direct port 443 on the domain. Both break when your VPS reverse-proxies to a home server.</p>
+<p>DNS-01 challenge solves this:</p>
+<ul>
+<li><strong>Wildcard support</strong>: <code>*.chenyun.org</code> covers all subdomains in one cert</li>
+<li><strong>No open ports</strong>: Validation happens entirely via DNS TXT records</li>
+<li><strong>Offline validation</strong>: Works even if the upstream VPS is restarting</li>
+<li><strong>No webroot conflicts</strong>: Every service can serve HTTPS without knowing about ACME</li>
+</ul>
+<p>The cost: you need API access to your DNS provider. For AWS Route53, that means an IAM user with <code>route53:ChangeResourceRecordSets</code> and <code>route53:GetChange</code> permissions.</p>
+<h2 id="2-acme-sh-Installation-Account-Setup"><a href="#2-acme-sh-Installation-Account-Setup" class="headerlink" title="2. acme.sh Installation &amp; Account Setup"></a>2. acme.sh Installation &amp; Account Setup</h2><p>acme.sh is a pure-shell ACME client — no dependencies beyond <code>curl</code>, <code>openssl</code>, and <code>cron</code>. Install as a non-root user:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">curl https://get.acme.sh | sh</span><br></pre></td></tr></table></figure>
+
+<p>This creates <code>~/.acme.sh/</code> with the client binary, DNS API plugins, and account configuration. No <code>sudo</code> needed for issuance — only the deploy step requires root (for writing to <code>/etc/ssl/</code>).</p>
+<p>The account configuration stores the default ACME server and AWS credentials:</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">~/.acme.sh/account.conf</span><br><span class="line">├── DEFAULT_ACME_SERVER=&#x27;https://acme-v02.api.letsencrypt.org/directory&#x27;</span><br><span class="line">├── SAVED_AWS_ACCESS_KEY_ID=&#x27;AKIA...&#x27;</span><br><span class="line">└── SAVED_AWS_SECRET_ACCESS_KEY=&#x27;...&#x27;</span><br></pre></td></tr></table></figure>
+
+<p><strong>Security note</strong>: AWS credentials are stored in plaintext in <code>account.conf</code>. This file is only readable by the <code>michael</code> user. For production environments, consider using AWS IAM Instance Profiles or a secrets manager — but for a single-user N100, file permissions suffice.</p>
+<h2 id="3-Wildcard-Certificate-Issuance"><a href="#3-Wildcard-Certificate-Issuance" class="headerlink" title="3. Wildcard Certificate Issuance"></a>3. Wildcard Certificate Issuance</h2><p>Issue a wildcard ECC certificate (P-256 &#x2F; secp256r1):</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="built_in">export</span> AWS_ACCESS_KEY_ID=<span class="string">&#x27;AKIA...&#x27;</span></span><br><span class="line"><span class="built_in">export</span> AWS_SECRET_ACCESS_KEY=<span class="string">&#x27;...&#x27;</span></span><br><span class="line">acme.sh --issue \</span><br><span class="line">  --dns dns_aws \</span><br><span class="line">  --domain chenyun.org \</span><br><span class="line">  --domain *.chenyun.org \</span><br><span class="line">  --keylength ec-256 \</span><br><span class="line">  --server letsencrypt</span><br></pre></td></tr></table></figure>
+
+<p>The <code>dns_aws</code> plugin:</p>
+<ol>
+<li>Creates a TXT record <code>_acme-challenge.chenyun.org</code> in Route53</li>
+<li>Polls until the record propagates (typically 10-60 seconds)</li>
+<li>Triggers Let’s Encrypt validation</li>
+<li>Removes the TXT record after validation</li>
+</ol>
+<p>Result (stored in <code>~/.acme.sh/chenyun.org_ecc/</code>):</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">chenyun.org_ecc/</span><br><span class="line">├── chenyun.org.cer        # leaf certificate</span><br><span class="line">├── chenyun.org.key        # private key (EC P-256, 227 bytes)</span><br><span class="line">├── fullchain.cer          # leaf + intermediate + root (2,865 bytes)</span><br><span class="line">├── ca.cer                 # CA certificate</span><br><span class="line">├── chenyun.org.conf       # domain config + renewal metadata</span><br><span class="line">├── chenyun.org.csr        # certificate signing request</span><br><span class="line">└── chenyun.org.csr.conf   # CSR config</span><br></pre></td></tr></table></figure>
+
+<p>The domain config stores metadata including issue date, renewal deadlines, and API endpoints:</p>
+<figure class="highlight ini"><table><tr><td class="code"><pre><span class="line"><span class="attr">Le_Domain</span>=<span class="string">&#x27;chenyun.org&#x27;</span></span><br><span class="line"><span class="attr">Le_Alt</span>=<span class="string">&#x27;*.chenyun.org&#x27;</span></span><br><span class="line"><span class="attr">Le_Webroot</span>=<span class="string">&#x27;dns_aws&#x27;</span></span><br><span class="line"><span class="attr">Le_Keylength</span>=<span class="string">&#x27;ec-256&#x27;</span></span><br><span class="line"><span class="attr">Le_CertCreateTimeStr</span>=<span class="string">&#x27;2026-05-14T15:17:18Z&#x27;</span></span><br><span class="line"><span class="attr">Le_NextRenewTimeStr</span>=<span class="string">&#x27;2026-07-14T00:25:25Z&#x27;</span></span><br><span class="line"><span class="attr">Le_API</span>=<span class="string">&#x27;https://acme-v02.api.letsencrypt.org/directory&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="4-Certificate-Deployment"><a href="#4-Certificate-Deployment" class="headerlink" title="4. Certificate Deployment"></a>4. Certificate Deployment</h2><p>acme.sh stores certificates in <code>~/.acme.sh/&lt;domain&gt;_ecc/</code>. For nginx to use them, they must be readable by the nginx worker process (usually <code>www-data</code>).</p>
+<p>The HanyanOS deployment uses a two-layer strategy:</p>
+<p><strong>Layer 1</strong>: Copy certs to <code>/etc/ssl/chenyun/</code> (root-owned, nginx-readable)</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">install -o root -g root -m 644 \</span><br><span class="line">  /home/michael/.acme.sh/chenyun.org_ecc/fullchain.cer \</span><br><span class="line">  /etc/ssl/chenyun/fullchain.cer</span><br><span class="line">install -o root -g root -m 600 \</span><br><span class="line">  /home/michael/.acme.sh/chenyun.org_ecc/chenyun.org.key \</span><br><span class="line">  /etc/ssl/chenyun/chenyun.org.key</span><br></pre></td></tr></table></figure>
+
+<p><strong>Layer 2</strong>: Certbot-style symlinks for compatibility</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">/etc/letsencrypt/live/chenyun.org/</span><br><span class="line">├── fullchain.pem -&gt; /etc/ssl/chenyun/fullchain.cer</span><br><span class="line">└── privkey.pem   -&gt; /etc/ssl/chenyun/chenyun.org.key</span><br></pre></td></tr></table></figure>
+
+<p>Nginx configuration references the certbot-compatible path:</p>
+<figure class="highlight nginx"><table><tr><td class="code"><pre><span class="line"><span class="attribute">ssl_certificate</span>     /etc/letsencrypt/live/chenyun.org/fullchain.pem;</span><br><span class="line"><span class="attribute">ssl_certificate_key</span> /etc/letsencrypt/live/chenyun.org/privkey.pem;</span><br></pre></td></tr></table></figure>
+
+<p>This design means you can swap the certificate source (acme.sh, certbot, manual CA) without touching nginx configuration — only the symlink target changes.</p>
+<p><strong>Important</strong>: Note the permission mismatch — <code>fullchain.cer</code> is <code>644</code> (world-readable), while <code>chenyun.org.key</code> is <code>600</code> (owner-only). The nginx worker must have <code>CAP_DAC_OVERRIDE</code> or be part of the <code>ssl-cert</code> group to read the key file.</p>
+<h2 id="5-The-Second-Certificate-hanyan-chenyun-org"><a href="#5-The-Second-Certificate-hanyan-chenyun-org" class="headerlink" title="5. The Second Certificate: hanyan.chenyun.org"></a>5. The Second Certificate: hanyan.chenyun.org</h2><p>A separate certificate exists for <code>hanyan.chenyun.org</code> — deployed to <code>/tmp/</code> for specific services:</p>
+<figure class="highlight ini"><table><tr><td class="code"><pre><span class="line"><span class="attr">Le_Domain</span>=<span class="string">&#x27;hanyan.chenyun.org&#x27;</span></span><br><span class="line"><span class="attr">Le_RealCertPath</span>=<span class="string">&#x27;/tmp/hanyan-fullchain.pem&#x27;</span></span><br><span class="line"><span class="attr">Le_RealKeyPath</span>=<span class="string">&#x27;/tmp/hanyan-key.pem&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>This is used for Agent-to-Agent TLS communication. The <code>/tmp/</code> deploy path avoids permission issues when non-root processes (OpenClaw agents) need direct TLS access without reading <code>/etc/ssl/</code>.</p>
+<h2 id="6-Automation-Cron-Based-Renewal"><a href="#6-Automation-Cron-Based-Renewal" class="headerlink" title="6. Automation: Cron-Based Renewal"></a>6. Automation: Cron-Based Renewal</h2><p>Let’s Encrypt certificates are valid for 90 days. acme.sh schedules renewal at 60 days (30 days before expiry):</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">56 20 * * * &quot;/home/michael/.acme.sh&quot;/acme.sh --cron --home &quot;/home/michael/.acme.sh&quot; &gt; /dev/null</span><br></pre></td></tr></table></figure>
+
+<p>Runs daily at 20:56. acme.sh checks each certificate’s <code>Le_NextRenewTimeStr</code> against the current date and only renews if within the renewal window. Renewal is idempotent — re-running before expiry is a no-op.</p>
+<p>The renewal flow:</p>
+<ol>
+<li>Renew via DNS challenge (same <code>dns_aws</code> plugin)</li>
+<li>Overwrite certificate files in <code>~/.acme.sh/&lt;domain&gt;_ecc/</code></li>
+<li><strong>Does not auto-deploy</strong> — the deploy step must be triggered manually or via <code>--renew-hook</code></li>
+</ol>
+<p><strong>Lesson learned</strong>: Initially, deployment was not part of the renewal hook. After the first automatic renewal, nginx was still serving the old certificate until the next manual deploy, causing a brief gap where browsers showed “Certificate Expires Soon” warnings. The fix: add a <code>--renew-hook</code> that copies to <code>/etc/ssl/chenyun/</code> and reloads nginx:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">acme.sh --issue \</span><br><span class="line">  --dns dns_aws \</span><br><span class="line">  --domain chenyun.org \</span><br><span class="line">  --domain *.chenyun.org \</span><br><span class="line">  --keylength ec-256 \</span><br><span class="line">  --renew-hook <span class="string">&quot;cp ... /etc/ssl/chenyun/ &amp;&amp; nginx -s reload&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="7-Nginx-TLS-Configuration"><a href="#7-Nginx-TLS-Configuration" class="headerlink" title="7. Nginx TLS Configuration"></a>7. Nginx TLS Configuration</h2><p>Each virtual host in the SNI proxy shares a common TLS configuration:</p>
+<figure class="highlight nginx"><table><tr><td class="code"><pre><span class="line"><span class="attribute">ssl_certificate</span>     /etc/letsencrypt/live/chenyun.org/fullchain.pem;</span><br><span class="line"><span class="attribute">ssl_certificate_key</span> /etc/letsencrypt/live/chenyun.org/privkey.pem;</span><br><span class="line"></span><br><span class="line"><span class="attribute">ssl_protocols</span> TLSv1.<span class="number">2</span> TLSv1.<span class="number">3</span>;</span><br><span class="line"><span class="attribute">ssl_ciphers</span> ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384;</span><br><span class="line"><span class="attribute">ssl_prefer_server_ciphers</span> <span class="literal">on</span>;</span><br><span class="line"><span class="attribute">ssl_session_timeout</span> <span class="number">1d</span>;</span><br><span class="line"><span class="attribute">ssl_session_cache</span> shared:SSL:<span class="number">50m</span>;</span><br><span class="line"><span class="attribute">ssl_session_tickets</span> <span class="literal">off</span>;</span><br></pre></td></tr></table></figure>
+
+<p>The ECDSA P-256 key (output of <code>--keylength ec-256</code>) enables TLS 1.3 with perfect forward secrecy, smaller handshake payloads than RSA, and CPU-efficient key exchange — ideal for an N100’s modest resources.</p>
+<h2 id="8-TLS-Certificate-Validation"><a href="#8-TLS-Certificate-Validation" class="headerlink" title="8. TLS Certificate Validation"></a>8. TLS Certificate Validation</h2><p>Verify the deployed certificate:</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># View certificate details</span></span><br><span class="line">openssl x509 -<span class="keyword">in</span> /etc/letsencrypt/live/chenyun.org/fullchain.pem -text -noout</span><br><span class="line"></span><br><span class="line"><span class="comment"># Check SAN entries (should include *.chenyun.org)</span></span><br><span class="line">openssl x509 -<span class="keyword">in</span> /etc/letsencrypt/live/chenyun.org/fullchain.pem \</span><br><span class="line">  -text -noout | grep -A1 <span class="string">&quot;Subject Alternative Name&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Verify chain</span></span><br><span class="line">openssl verify -untrusted /etc/letsencrypt/live/chenyun.org/fullchain.pem \</span><br><span class="line">  /etc/letsencrypt/live/chenyun.org/fullchain.pem</span><br><span class="line"></span><br><span class="line"><span class="comment"># Test TLS 1.3 handshake</span></span><br><span class="line"><span class="built_in">echo</span> | openssl s_client -connect photo.chenyun.org:443 -tls1_3 \</span><br><span class="line">  2&gt;/dev/null | grep -E <span class="string">&quot;Protocol|Cipher&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="9-Security-Considerations"><a href="#9-Security-Considerations" class="headerlink" title="9. Security Considerations"></a>9. Security Considerations</h2><table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>AWS key exposure</td>
+<td><code>account.conf</code> is user-readable only; restrict IAM to <code>route53:*</code> on the hosted zone</td>
+</tr>
+<tr>
+<td>Key theft</td>
+<td>Private key at <code>600</code> permissions; no remote backup</td>
+</tr>
+<tr>
+<td>Certificate transparency</td>
+<td>Automatic — Let’s Encrypt logs all certs to CT logs</td>
+</tr>
+<tr>
+<td>OCSP stapling</td>
+<td>Configure <code>ssl_stapling on;</code> in nginx for revocation checks</td>
+</tr>
+<tr>
+<td>DNS propagation delays</td>
+<td>Route53 is near-instant; <code>dns_aws</code> plugin polls with 10s intervals</td>
+</tr>
+</tbody></table>
+<h2 id="10-Lessons-Learned"><a href="#10-Lessons-Learned" class="headerlink" title="10. Lessons Learned"></a>10. Lessons Learned</h2><ol>
+<li><p><strong>Renewal hooks are non-negotiable</strong>: Without a <code>--renew-hook</code>, auto-renewal produces fresh certs that sit unused. Always include the deploy-and-reload step.</p>
+</li>
+<li><p><strong>Symlink indirection pays off</strong>: By pointing nginx at certbot-style paths and symlinking to the actual cert source, you can switch ACME clients, CAs, or deployment strategies without touching every virtual host config.</p>
+</li>
+<li><p><strong>ECC over RSA for embedded</strong>: On the N100’s Intel N100 (Alder Lake-N, 4 cores), ECDSA P-256 handshake completes ~3× faster than RSA 2048. The cert file is also ~400 bytes smaller — marginal, but every byte counts on constrained systems.</p>
+</li>
+<li><p><strong>Route53 rate limits</strong>: If you manage many domains, the <code>dns_aws</code> plugin’s default polling can hit Route53 API rate limits. Set <code>SAVED_AWS_DNS_SLOWRATE=1</code> in <code>account.conf</code> to add jitter.</p>
+</li>
+<li><p><strong>Test with staging first</strong>: Always issue against <code>--server https://acme-staging-v02.api.letsencrypt.org/directory</code> first. A misconfigured DNS challenge can bump into Let’s Encrypt’s 5-failures-per-hour rate limit.</p>
+</li>
+</ol>
+<h2 id="Conclusion"><a href="#Conclusion" class="headerlink" title="Conclusion"></a>Conclusion</h2><p>The acme.sh + Route53 DNS-01 pipeline provides fully automated, zero-touch certificate management for all seven HanyanOS domains. The wildcard ECC certificate covers every subdomain, renews unattended, and the symlink-based deployment decouples the certificate source from the web server configuration.</p>
+<p>For a self-hosted infrastructure behind FRP tunnels, DNS-01 challenge is the only practical choice — and with Route53’s API, the setup is both reliable and maintainable with about 20 lines of configuration and a single cron entry.</p>
+<hr>
+<p><em>Part of the HanyanOS 部署手记 series. Next: TBD.</em></p>
+]]></content>
+      <categories>
+        <category>tech</category>
+      </categories>
+      <tags>
+        <tag>DevOps</tag>
+        <tag>HanyanOS</tag>
+        <tag>Infrastructure</tag>
+      </tags>
+  </entry>
 </search>

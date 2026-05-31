@@ -170,7 +170,7 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">31</span>
+          <span class="site-state-item-count">32</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -216,6 +216,201 @@
     </div>
 
     <div class="main-inner index posts-expand">
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="https://www.chenyun.org/2026/06/01/2026-06-01-hanyan-infra-10/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="Michael Chen">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="望舒">
+      <meta itemprop="description" content="Michael Chen 的技术博客，关注 AI、云计算、软件工程和科技趋势">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | 望舒">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2026/06/01/2026-06-01-hanyan-infra-10/" class="post-title-link" itemprop="url">HanyanOS 部署手记</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-06-01 08:00:00" itemprop="dateCreated datePublished" datetime="2026-06-01T08:00:00+10:00">2026-06-01</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/tech/" itemprop="url" rel="index"><span itemprop="name">tech</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="Introduction"><a href="#Introduction" class="headerlink" title="Introduction"></a>Introduction</h2><p>A self-hosted infrastructure with seven public-facing domains demands robust TLS certificate management. HanyanOS routes traffic for <code>chenyun.org</code>, <code>www.chenyun.org</code>, <code>n8n.chenyun.org</code>, <code>photo.chenyun.org</code>, <code>mail.chenyun.org</code>, <code>hanyan.chenyun.org</code>, and <code>rss.chenyun.org</code> through a single N100 server. Each subdomain requires valid, trusted certificates.</p>
+<p>This post covers the certificate automation pipeline built around <strong>acme.sh</strong> with <strong>AWS Route53 DNS-01 challenge</strong>, enabling wildcard (<code>*.chenyun.org</code>) certificate issuance and fully automated renewal — no open ports, no webroot conflicts, no manual intervention.</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">┌─────────────────────────────────────────────────────────────────┐</span><br><span class="line">│                   SSL Certificate Pipeline                       │</span><br><span class="line">├─────────────────────────────────────────────────────────────────┤</span><br><span class="line">│                                                                  │</span><br><span class="line">│  acme.sh ──► AWS Route53 API ──► Let&#x27;s Encrypt ──► ECC Certs    │</span><br><span class="line">│     │                          (DNS-01 Challenge)                │</span><br><span class="line">│     │                                                           │</span><br><span class="line">│     ▼                                                           │</span><br><span class="line">│  /home/michael/.acme.sh/chenyun.org_ecc/                        │</span><br><span class="line">│     │                                                           │</span><br><span class="line">│     ▼ (manual/scripted copy)                                    │</span><br><span class="line">│  /etc/ssl/chenyun/                                              │</span><br><span class="line">│     │                                                           │</span><br><span class="line">│     ▼ (symlink)                                                 │</span><br><span class="line">│  /etc/letsencrypt/live/chenyun.org/  (compat path)              │</span><br><span class="line">│     │                                                           │</span><br><span class="line">│     ▼                                                           │</span><br><span class="line">│  Nginx SNI Proxy (all 7 virtual hosts)                          │</span><br><span class="line">│                                                                  │</span><br><span class="line">└─────────────────────────────────────────────────────────────────┘</span><br></pre></td></tr></table></figure>
+
+<h2 id="1-Why-DNS-01-Challenge"><a href="#1-Why-DNS-01-Challenge" class="headerlink" title="1. Why DNS-01 Challenge"></a>1. Why DNS-01 Challenge</h2><p>HTTP-01 challenges require port 80 accessibility and per-domain webroot configuration — problematic for a server behind FRP tunnels where traffic routing can be asymmetrical. TLS-ALPN-01 requires direct port 443 on the domain. Both break when your VPS reverse-proxies to a home server.</p>
+<p>DNS-01 challenge solves this:</p>
+<ul>
+<li><strong>Wildcard support</strong>: <code>*.chenyun.org</code> covers all subdomains in one cert</li>
+<li><strong>No open ports</strong>: Validation happens entirely via DNS TXT records</li>
+<li><strong>Offline validation</strong>: Works even if the upstream VPS is restarting</li>
+<li><strong>No webroot conflicts</strong>: Every service can serve HTTPS without knowing about ACME</li>
+</ul>
+<p>The cost: you need API access to your DNS provider. For AWS Route53, that means an IAM user with <code>route53:ChangeResourceRecordSets</code> and <code>route53:GetChange</code> permissions.</p>
+<h2 id="2-acme-sh-Installation-Account-Setup"><a href="#2-acme-sh-Installation-Account-Setup" class="headerlink" title="2. acme.sh Installation &amp; Account Setup"></a>2. acme.sh Installation &amp; Account Setup</h2><p>acme.sh is a pure-shell ACME client — no dependencies beyond <code>curl</code>, <code>openssl</code>, and <code>cron</code>. Install as a non-root user:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl https://get.acme.sh | sh</span><br></pre></td></tr></table></figure>
+
+<p>This creates <code>~/.acme.sh/</code> with the client binary, DNS API plugins, and account configuration. No <code>sudo</code> needed for issuance — only the deploy step requires root (for writing to <code>/etc/ssl/</code>).</p>
+<p>The account configuration stores the default ACME server and AWS credentials:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">~/.acme.sh/account.conf</span><br><span class="line">├── DEFAULT_ACME_SERVER=&#x27;https://acme-v02.api.letsencrypt.org/directory&#x27;</span><br><span class="line">├── SAVED_AWS_ACCESS_KEY_ID=&#x27;AKIA...&#x27;</span><br><span class="line">└── SAVED_AWS_SECRET_ACCESS_KEY=&#x27;...&#x27;</span><br></pre></td></tr></table></figure>
+
+<p><strong>Security note</strong>: AWS credentials are stored in plaintext in <code>account.conf</code>. This file is only readable by the <code>michael</code> user. For production environments, consider using AWS IAM Instance Profiles or a secrets manager — but for a single-user N100, file permissions suffice.</p>
+<h2 id="3-Wildcard-Certificate-Issuance"><a href="#3-Wildcard-Certificate-Issuance" class="headerlink" title="3. Wildcard Certificate Issuance"></a>3. Wildcard Certificate Issuance</h2><p>Issue a wildcard ECC certificate (P-256 &#x2F; secp256r1):</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">export</span> AWS_ACCESS_KEY_ID=<span class="string">&#x27;AKIA...&#x27;</span></span><br><span class="line"><span class="built_in">export</span> AWS_SECRET_ACCESS_KEY=<span class="string">&#x27;...&#x27;</span></span><br><span class="line">acme.sh --issue \</span><br><span class="line">  --dns dns_aws \</span><br><span class="line">  --domain chenyun.org \</span><br><span class="line">  --domain *.chenyun.org \</span><br><span class="line">  --keylength ec-256 \</span><br><span class="line">  --server letsencrypt</span><br></pre></td></tr></table></figure>
+
+<p>The <code>dns_aws</code> plugin:</p>
+<ol>
+<li>Creates a TXT record <code>_acme-challenge.chenyun.org</code> in Route53</li>
+<li>Polls until the record propagates (typically 10-60 seconds)</li>
+<li>Triggers Let’s Encrypt validation</li>
+<li>Removes the TXT record after validation</li>
+</ol>
+<p>Result (stored in <code>~/.acme.sh/chenyun.org_ecc/</code>):</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">chenyun.org_ecc/</span><br><span class="line">├── chenyun.org.cer        # leaf certificate</span><br><span class="line">├── chenyun.org.key        # private key (EC P-256, 227 bytes)</span><br><span class="line">├── fullchain.cer          # leaf + intermediate + root (2,865 bytes)</span><br><span class="line">├── ca.cer                 # CA certificate</span><br><span class="line">├── chenyun.org.conf       # domain config + renewal metadata</span><br><span class="line">├── chenyun.org.csr        # certificate signing request</span><br><span class="line">└── chenyun.org.csr.conf   # CSR config</span><br></pre></td></tr></table></figure>
+
+<p>The domain config stores metadata including issue date, renewal deadlines, and API endpoints:</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">Le_Domain</span>=<span class="string">&#x27;chenyun.org&#x27;</span></span><br><span class="line"><span class="attr">Le_Alt</span>=<span class="string">&#x27;*.chenyun.org&#x27;</span></span><br><span class="line"><span class="attr">Le_Webroot</span>=<span class="string">&#x27;dns_aws&#x27;</span></span><br><span class="line"><span class="attr">Le_Keylength</span>=<span class="string">&#x27;ec-256&#x27;</span></span><br><span class="line"><span class="attr">Le_CertCreateTimeStr</span>=<span class="string">&#x27;2026-05-14T15:17:18Z&#x27;</span></span><br><span class="line"><span class="attr">Le_NextRenewTimeStr</span>=<span class="string">&#x27;2026-07-14T00:25:25Z&#x27;</span></span><br><span class="line"><span class="attr">Le_API</span>=<span class="string">&#x27;https://acme-v02.api.letsencrypt.org/directory&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="4-Certificate-Deployment"><a href="#4-Certificate-Deployment" class="headerlink" title="4. Certificate Deployment"></a>4. Certificate Deployment</h2><p>acme.sh stores certificates in <code>~/.acme.sh/&lt;domain&gt;_ecc/</code>. For nginx to use them, they must be readable by the nginx worker process (usually <code>www-data</code>).</p>
+<p>The HanyanOS deployment uses a two-layer strategy:</p>
+<p><strong>Layer 1</strong>: Copy certs to <code>/etc/ssl/chenyun/</code> (root-owned, nginx-readable)</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">install -o root -g root -m 644 \</span><br><span class="line">  /home/michael/.acme.sh/chenyun.org_ecc/fullchain.cer \</span><br><span class="line">  /etc/ssl/chenyun/fullchain.cer</span><br><span class="line">install -o root -g root -m 600 \</span><br><span class="line">  /home/michael/.acme.sh/chenyun.org_ecc/chenyun.org.key \</span><br><span class="line">  /etc/ssl/chenyun/chenyun.org.key</span><br></pre></td></tr></table></figure>
+
+<p><strong>Layer 2</strong>: Certbot-style symlinks for compatibility</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">/etc/letsencrypt/live/chenyun.org/</span><br><span class="line">├── fullchain.pem -&gt; /etc/ssl/chenyun/fullchain.cer</span><br><span class="line">└── privkey.pem   -&gt; /etc/ssl/chenyun/chenyun.org.key</span><br></pre></td></tr></table></figure>
+
+<p>Nginx configuration references the certbot-compatible path:</p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">ssl_certificate</span>     /etc/letsencrypt/live/chenyun.org/fullchain.pem;</span><br><span class="line"><span class="attribute">ssl_certificate_key</span> /etc/letsencrypt/live/chenyun.org/privkey.pem;</span><br></pre></td></tr></table></figure>
+
+<p>This design means you can swap the certificate source (acme.sh, certbot, manual CA) without touching nginx configuration — only the symlink target changes.</p>
+<p><strong>Important</strong>: Note the permission mismatch — <code>fullchain.cer</code> is <code>644</code> (world-readable), while <code>chenyun.org.key</code> is <code>600</code> (owner-only). The nginx worker must have <code>CAP_DAC_OVERRIDE</code> or be part of the <code>ssl-cert</code> group to read the key file.</p>
+<h2 id="5-The-Second-Certificate-hanyan-chenyun-org"><a href="#5-The-Second-Certificate-hanyan-chenyun-org" class="headerlink" title="5. The Second Certificate: hanyan.chenyun.org"></a>5. The Second Certificate: hanyan.chenyun.org</h2><p>A separate certificate exists for <code>hanyan.chenyun.org</code> — deployed to <code>/tmp/</code> for specific services:</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">Le_Domain</span>=<span class="string">&#x27;hanyan.chenyun.org&#x27;</span></span><br><span class="line"><span class="attr">Le_RealCertPath</span>=<span class="string">&#x27;/tmp/hanyan-fullchain.pem&#x27;</span></span><br><span class="line"><span class="attr">Le_RealKeyPath</span>=<span class="string">&#x27;/tmp/hanyan-key.pem&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<p>This is used for Agent-to-Agent TLS communication. The <code>/tmp/</code> deploy path avoids permission issues when non-root processes (OpenClaw agents) need direct TLS access without reading <code>/etc/ssl/</code>.</p>
+<h2 id="6-Automation-Cron-Based-Renewal"><a href="#6-Automation-Cron-Based-Renewal" class="headerlink" title="6. Automation: Cron-Based Renewal"></a>6. Automation: Cron-Based Renewal</h2><p>Let’s Encrypt certificates are valid for 90 days. acme.sh schedules renewal at 60 days (30 days before expiry):</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">56 20 * * * &quot;/home/michael/.acme.sh&quot;/acme.sh --cron --home &quot;/home/michael/.acme.sh&quot; &gt; /dev/null</span><br></pre></td></tr></table></figure>
+
+<p>Runs daily at 20:56. acme.sh checks each certificate’s <code>Le_NextRenewTimeStr</code> against the current date and only renews if within the renewal window. Renewal is idempotent — re-running before expiry is a no-op.</p>
+<p>The renewal flow:</p>
+<ol>
+<li>Renew via DNS challenge (same <code>dns_aws</code> plugin)</li>
+<li>Overwrite certificate files in <code>~/.acme.sh/&lt;domain&gt;_ecc/</code></li>
+<li><strong>Does not auto-deploy</strong> — the deploy step must be triggered manually or via <code>--renew-hook</code></li>
+</ol>
+<p><strong>Lesson learned</strong>: Initially, deployment was not part of the renewal hook. After the first automatic renewal, nginx was still serving the old certificate until the next manual deploy, causing a brief gap where browsers showed “Certificate Expires Soon” warnings. The fix: add a <code>--renew-hook</code> that copies to <code>/etc/ssl/chenyun/</code> and reloads nginx:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">acme.sh --issue \</span><br><span class="line">  --dns dns_aws \</span><br><span class="line">  --domain chenyun.org \</span><br><span class="line">  --domain *.chenyun.org \</span><br><span class="line">  --keylength ec-256 \</span><br><span class="line">  --renew-hook <span class="string">&quot;cp ... /etc/ssl/chenyun/ &amp;&amp; nginx -s reload&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="7-Nginx-TLS-Configuration"><a href="#7-Nginx-TLS-Configuration" class="headerlink" title="7. Nginx TLS Configuration"></a>7. Nginx TLS Configuration</h2><p>Each virtual host in the SNI proxy shares a common TLS configuration:</p>
+<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="attribute">ssl_certificate</span>     /etc/letsencrypt/live/chenyun.org/fullchain.pem;</span><br><span class="line"><span class="attribute">ssl_certificate_key</span> /etc/letsencrypt/live/chenyun.org/privkey.pem;</span><br><span class="line"></span><br><span class="line"><span class="attribute">ssl_protocols</span> TLSv1.<span class="number">2</span> TLSv1.<span class="number">3</span>;</span><br><span class="line"><span class="attribute">ssl_ciphers</span> ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384;</span><br><span class="line"><span class="attribute">ssl_prefer_server_ciphers</span> <span class="literal">on</span>;</span><br><span class="line"><span class="attribute">ssl_session_timeout</span> <span class="number">1d</span>;</span><br><span class="line"><span class="attribute">ssl_session_cache</span> shared:SSL:<span class="number">50m</span>;</span><br><span class="line"><span class="attribute">ssl_session_tickets</span> <span class="literal">off</span>;</span><br></pre></td></tr></table></figure>
+
+<p>The ECDSA P-256 key (output of <code>--keylength ec-256</code>) enables TLS 1.3 with perfect forward secrecy, smaller handshake payloads than RSA, and CPU-efficient key exchange — ideal for an N100’s modest resources.</p>
+<h2 id="8-TLS-Certificate-Validation"><a href="#8-TLS-Certificate-Validation" class="headerlink" title="8. TLS Certificate Validation"></a>8. TLS Certificate Validation</h2><p>Verify the deployed certificate:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># View certificate details</span></span><br><span class="line">openssl x509 -<span class="keyword">in</span> /etc/letsencrypt/live/chenyun.org/fullchain.pem -text -noout</span><br><span class="line"></span><br><span class="line"><span class="comment"># Check SAN entries (should include *.chenyun.org)</span></span><br><span class="line">openssl x509 -<span class="keyword">in</span> /etc/letsencrypt/live/chenyun.org/fullchain.pem \</span><br><span class="line">  -text -noout | grep -A1 <span class="string">&quot;Subject Alternative Name&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Verify chain</span></span><br><span class="line">openssl verify -untrusted /etc/letsencrypt/live/chenyun.org/fullchain.pem \</span><br><span class="line">  /etc/letsencrypt/live/chenyun.org/fullchain.pem</span><br><span class="line"></span><br><span class="line"><span class="comment"># Test TLS 1.3 handshake</span></span><br><span class="line"><span class="built_in">echo</span> | openssl s_client -connect photo.chenyun.org:443 -tls1_3 \</span><br><span class="line">  2&gt;/dev/null | grep -E <span class="string">&quot;Protocol|Cipher&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="9-Security-Considerations"><a href="#9-Security-Considerations" class="headerlink" title="9. Security Considerations"></a>9. Security Considerations</h2><table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Mitigation</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>AWS key exposure</td>
+<td><code>account.conf</code> is user-readable only; restrict IAM to <code>route53:*</code> on the hosted zone</td>
+</tr>
+<tr>
+<td>Key theft</td>
+<td>Private key at <code>600</code> permissions; no remote backup</td>
+</tr>
+<tr>
+<td>Certificate transparency</td>
+<td>Automatic — Let’s Encrypt logs all certs to CT logs</td>
+</tr>
+<tr>
+<td>OCSP stapling</td>
+<td>Configure <code>ssl_stapling on;</code> in nginx for revocation checks</td>
+</tr>
+<tr>
+<td>DNS propagation delays</td>
+<td>Route53 is near-instant; <code>dns_aws</code> plugin polls with 10s intervals</td>
+</tr>
+</tbody></table>
+<h2 id="10-Lessons-Learned"><a href="#10-Lessons-Learned" class="headerlink" title="10. Lessons Learned"></a>10. Lessons Learned</h2><ol>
+<li><p><strong>Renewal hooks are non-negotiable</strong>: Without a <code>--renew-hook</code>, auto-renewal produces fresh certs that sit unused. Always include the deploy-and-reload step.</p>
+</li>
+<li><p><strong>Symlink indirection pays off</strong>: By pointing nginx at certbot-style paths and symlinking to the actual cert source, you can switch ACME clients, CAs, or deployment strategies without touching every virtual host config.</p>
+</li>
+<li><p><strong>ECC over RSA for embedded</strong>: On the N100’s Intel N100 (Alder Lake-N, 4 cores), ECDSA P-256 handshake completes ~3× faster than RSA 2048. The cert file is also ~400 bytes smaller — marginal, but every byte counts on constrained systems.</p>
+</li>
+<li><p><strong>Route53 rate limits</strong>: If you manage many domains, the <code>dns_aws</code> plugin’s default polling can hit Route53 API rate limits. Set <code>SAVED_AWS_DNS_SLOWRATE=1</code> in <code>account.conf</code> to add jitter.</p>
+</li>
+<li><p><strong>Test with staging first</strong>: Always issue against <code>--server https://acme-staging-v02.api.letsencrypt.org/directory</code> first. A misconfigured DNS challenge can bump into Let’s Encrypt’s 5-failures-per-hour rate limit.</p>
+</li>
+</ol>
+<h2 id="Conclusion"><a href="#Conclusion" class="headerlink" title="Conclusion"></a>Conclusion</h2><p>The acme.sh + Route53 DNS-01 pipeline provides fully automated, zero-touch certificate management for all seven HanyanOS domains. The wildcard ECC certificate covers every subdomain, renews unattended, and the symlink-based deployment decouples the certificate source from the web server configuration.</p>
+<p>For a self-hosted infrastructure behind FRP tunnels, DNS-01 challenge is the only practical choice — and with Route53’s API, the setup is both reliable and maintainable with about 20 lines of configuration and a single cron entry.</p>
+<hr>
+<p><em>Part of the HanyanOS 部署手记 series. Next: TBD.</em></p>
+
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
 
     
 
@@ -1897,256 +2092,6 @@
             </div>
           <!--/noindex-->
         
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="https://www.chenyun.org/2026/05/25/2026-05-25-hanyan-infra-5/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.png">
-      <meta itemprop="name" content="Michael Chen">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="望舒">
-      <meta itemprop="description" content="Michael Chen 的技术博客，关注 AI、云计算、软件工程和科技趋势">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content=" | 望舒">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2026/05/25/2026-05-25-hanyan-infra-5/" class="post-title-link" itemprop="url">HanyanOS 部署手记</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">发表于</span>
-
-      <time title="创建时间：2026-05-25 08:05:00" itemprop="dateCreated datePublished" datetime="2026-05-25T08:05:00+10:00">2026-05-25</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-folder"></i>
-      </span>
-      <span class="post-meta-item-text">分类于</span>
-        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-          <a href="/categories/tech/" itemprop="url" rel="index"><span itemprop="name">tech</span></a>
-        </span>
-    </span>
-
-  
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h2 id="1-Introduction"><a href="#1-Introduction" class="headerlink" title="1. Introduction"></a>1. Introduction</h2><p>A self-hosted blog is the public face of any infrastructure project. For HanyanOS, the blog at <code>blog.chenyun.org</code> serves as both the project’s documentation portal and a real-world proving ground for Dockerized PHP applications behind an FRP tunnel. Deploying WordPress on a NAT’d N100 presents unique challenges: the database must be container-local, the PHP stack must handle FRP-induced latency gracefully, and the entire pipeline from VPS edge to Docker container must be transparent to visitors.</p>
-<p>This post documents the complete <strong>WordPress + MariaDB</strong> deployment on the N100, covering Docker Compose orchestration, Nginx reverse proxy configuration, FRP tunnel integration, static asset optimization, and operational lessons from running a PHP application through a three-hop network path.</p>
-<hr>
-<h2 id="2-Architecture-Overview"><a href="#2-Architecture-Overview" class="headerlink" title="2. Architecture Overview"></a>2. Architecture Overview</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">┌─ Internet ──────────────────────────────────────────────┐</span><br><span class="line">│  blog.chenyun.org → CNAME → Lightsail 52.220.247.252   │</span><br><span class="line">└────────────────────────┬────────────────────────────────┘</span><br><span class="line">                         │ :443 (HTTPS terminated at VPS)</span><br><span class="line">┌─ Lightsail VPS (SG) ──┴─────────────────────────────────┐</span><br><span class="line">│  Nginx SNI: blog.chenyun.org                            │</span><br><span class="line">│  SSL: Let&#x27;s Encrypt (acme.sh + Route53 DNS-01)          │</span><br><span class="line">│  proxy_pass → 127.0.0.1:7444  (FRP tunnel endpoint)     │</span><br><span class="line">└────────────────────────┬────────────────────────────────┘</span><br><span class="line">                         │ :7444 (TCP tunnel, plain HTTP)</span><br><span class="line">┌─ FRP Tunnel ───────────┴─────────────────────────────────┐</span><br><span class="line">│  frps(Lightsail:7444) ←→ frpc(N100)                     │</span><br><span class="line">│  TCP tunnel, tcp_mux enabled, no encryption (local net)  │</span><br><span class="line">└────────────────────────┬────────────────────────────────┘</span><br><span class="line">                         │ :80</span><br><span class="line">┌─ N100 Nginx ───────────┴─────────────────────────────────┐</span><br><span class="line">│  server_name blog.chenyun.org;                            │</span><br><span class="line">│  proxy_pass http://127.0.0.1:8081;                       │</span><br><span class="line">│  X-Forwarded-Proto: https (from VPS)                     │</span><br><span class="line">└────────────────────────┬────────────────────────────────┘</span><br><span class="line">                         │ :8081</span><br><span class="line">┌─ Docker serena-net ────┴─────────────────────────────────┐</span><br><span class="line">│                                                          │</span><br><span class="line">│  ┌──────────────┐      ┌──────────────┐                  │</span><br><span class="line">│  │  serena-wp   │      │  serena-db   │                  │</span><br><span class="line">│  │ WordPress    │─────▶│  MariaDB     │                  │</span><br><span class="line">│  │ 6.7 PHP 8.3  │      │  10.11       │                  │</span><br><span class="line">│  │ :8081→:80    │      │  :3306       │                  │</span><br><span class="line">│  └──────────────┘      └──────────────┘                  │</span><br><span class="line">│        │                       │                         │</span><br><span class="line">│  /home/michael/         /home/michael/                   │</span><br><span class="line">│  www/wordpress          data/mysql-data                  │</span><br><span class="line">│  (bind mount)           (bind mount)                     │</span><br><span class="line">│                                                          │</span><br><span class="line">│  ┌──────────────┐                                        │</span><br><span class="line">│  │ serena-adminer│  db.chenyun.org                       │</span><br><span class="line">│  │ Adminer :8082 │  (database UI)                        │</span><br><span class="line">│  └──────────────┘                                        │</span><br><span class="line">└──────────────────────────────────────────────────────────┘</span><br></pre></td></tr></table></figure>
-
-<h3 id="Traffic-Flow"><a href="#Traffic-Flow" class="headerlink" title="Traffic Flow"></a>Traffic Flow</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Visitor → blog.chenyun.org</span><br><span class="line">  → DNS → Lightsail (52.220.247.252)</span><br><span class="line">    → Nginx (SSL termination, SNI routing)</span><br><span class="line">      → FRP tunnel (port 7444)</span><br><span class="line">        → N100 nginx (Host-based routing)</span><br><span class="line">          → Docker serena-wp:8081 (Apache PHP)</span><br><span class="line">            → Docker serena-db:3306 (MariaDB)</span><br></pre></td></tr></table></figure>
-
-<p>The round-trip latency from Singapore to Brisbane (~90ms) is absorbed by WordPress’s page cache and Nginx’s micro-caching for static assets.</p>
-<hr>
-<h2 id="3-Docker-Compose-Deployment"><a href="#3-Docker-Compose-Deployment" class="headerlink" title="3. Docker Compose Deployment"></a>3. Docker Compose Deployment</h2><p>The blog stack lives in a shared Compose file alongside other HanyanOS services, all on the <code>serena-net</code> bridge network:</p>
-<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /home/michael/infra/docker/docker-compose.yml (excerpt)</span></span><br><span class="line"><span class="attr">services:</span></span><br><span class="line">  <span class="attr">serena-wp:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">wordpress:6.7-php8.3-apache</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">serena-wp</span></span><br><span class="line">    <span class="attr">restart:</span> <span class="string">unless-stopped</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;127.0.0.1:8081:80&quot;</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="attr">WORDPRESS_DB_HOST:</span> <span class="string">serena-db</span></span><br><span class="line">      <span class="attr">WORDPRESS_DB_NAME:</span> <span class="string">wordpress</span></span><br><span class="line">      <span class="attr">WORDPRESS_DB_USER:</span> <span class="string">michael</span></span><br><span class="line">      <span class="attr">WORDPRESS_DB_PASSWORD:</span> <span class="string">$&#123;WP_DB_PASSWORD&#125;</span></span><br><span class="line">    <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">/home/michael/www/wordpress:/var/www/html</span></span><br><span class="line">    <span class="attr">depends_on:</span></span><br><span class="line">      <span class="attr">serena-db:</span></span><br><span class="line">        <span class="attr">condition:</span> <span class="string">service_healthy</span></span><br><span class="line"></span><br><span class="line">  <span class="attr">serena-db:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">mariadb:10.11</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">wordpress</span></span><br><span class="line">    <span class="attr">restart:</span> <span class="string">unless-stopped</span></span><br><span class="line">    <span class="attr">environment:</span></span><br><span class="line">      <span class="attr">MARIADB_ROOT_PASSWORD:</span> <span class="string">$&#123;MARIADB_ROOT_PW&#125;</span></span><br><span class="line">      <span class="attr">MARIADB_DATABASE:</span> <span class="string">wordpress</span></span><br><span class="line">      <span class="attr">MARIADB_USER:</span> <span class="string">michael</span></span><br><span class="line">      <span class="attr">MARIADB_PASSWORD:</span> <span class="string">$&#123;WP_DB_PASSWORD&#125;</span></span><br><span class="line">    <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">/home/michael/data/mysql-data:/var/lib/mysql</span></span><br><span class="line">    <span class="attr">healthcheck:</span></span><br><span class="line">      <span class="attr">test:</span> [<span class="string">&quot;CMD&quot;</span>, <span class="string">&quot;healthcheck.sh&quot;</span>, <span class="string">&quot;--connect&quot;</span>, <span class="string">&quot;--innodb_initialized&quot;</span>]</span><br><span class="line">      <span class="attr">interval:</span> <span class="string">10s</span></span><br><span class="line">      <span class="attr">retries:</span> <span class="number">5</span></span><br><span class="line"></span><br><span class="line">  <span class="attr">serena-adminer:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">adminer:latest</span></span><br><span class="line">    <span class="attr">container_name:</span> <span class="string">serena-adminer</span></span><br><span class="line">    <span class="attr">restart:</span> <span class="string">unless-stopped</span></span><br><span class="line">    <span class="attr">ports:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">&quot;127.0.0.1:8082:8080&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="attr">networks:</span></span><br><span class="line">  <span class="attr">default:</span></span><br><span class="line">    <span class="attr">name:</span> <span class="string">serena-net</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="Key-Design-Decisions"><a href="#Key-Design-Decisions" class="headerlink" title="Key Design Decisions"></a>Key Design Decisions</h3><table>
-<thead>
-<tr>
-<th>Decision</th>
-<th>Rationale</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><strong>MariaDB over MySQL</strong></td>
-<td>Lighter memory footprint on N100 (80MB vs 180MB idle); drop-in replacement; same query interface</td>
-</tr>
-<tr>
-<td><strong>Bind mount for wp-content</strong></td>
-<td>Direct file access for theme&#x2F;plugin development, backup simplicity, and git integration</td>
-</tr>
-<tr>
-<td><strong>Health check dependency</strong></td>
-<td>Prevents WordPress starting before MariaDB is ready to accept connections</td>
-</tr>
-<tr>
-<td><strong>127.0.0.1 port binding</strong></td>
-<td>WordPress is never directly exposed — all traffic goes through Nginx for unified logging and security headers</td>
-</tr>
-<tr>
-<td><strong>Environment variables</strong></td>
-<td>Docker secrets&#x2F;prevent credential drift; <code>.env</code> file managed by HanyanOS vault</td>
-</tr>
-</tbody></table>
-<h3 id="Database-Connection"><a href="#Database-Connection" class="headerlink" title="Database Connection"></a>Database Connection</h3><p>WordPress connects to MariaDB via Docker’s embedded DNS. The service name <code>serena-db</code> resolves to the container’s IP on <code>serena-net</code>. The <code>wp-config.php</code> auto-generated by the WordPress entrypoint:</p>
-<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="title function_ invoke__">define</span>(<span class="string">&#x27;DB_NAME&#x27;</span>, <span class="string">&#x27;wordpress&#x27;</span>);</span><br><span class="line"><span class="title function_ invoke__">define</span>(<span class="string">&#x27;DB_USER&#x27;</span>, <span class="string">&#x27;michael&#x27;</span>);</span><br><span class="line"><span class="title function_ invoke__">define</span>(<span class="string">&#x27;DB_PASSWORD&#x27;</span>, <span class="string">&#x27;Phoenix19820301@&#x27;</span>);</span><br><span class="line"><span class="title function_ invoke__">define</span>(<span class="string">&#x27;DB_HOST&#x27;</span>, <span class="string">&#x27;serena-db&#x27;</span>);</span><br></pre></td></tr></table></figure>
-
-<p>The <code>FORCE_SSL_LOGIN</code> constant is set to <code>true</code> to ensure all admin authentication happens over HTTPS, even though SSL termination occurs at the VPS:</p>
-<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="title function_ invoke__">define</span>(<span class="string">&#x27;FORCE_SSL_LOGIN&#x27;</span>, <span class="literal">true</span>);</span><br></pre></td></tr></table></figure>
-
-<p>The HTTPS detection is handled by the X-Forwarded-Proto header injected by the N100 Nginx:</p>
-<figure class="highlight php"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span> (<span class="keyword">isset</span>(<span class="variable">$_SERVER</span>[<span class="string">&#x27;HTTP_X_FORWARDED_PROTO&#x27;</span>])</span><br><span class="line">    &amp;&amp; <span class="title function_ invoke__">strpos</span>(<span class="variable">$_SERVER</span>[<span class="string">&#x27;HTTP_X_FORWARDED_PROTO&#x27;</span>],<span class="string">&#x27;https&#x27;</span>) !== <span class="literal">false</span>) &#123;</span><br><span class="line">    <span class="variable">$_SERVER</span>[<span class="string">&#x27;HTTPS&#x27;</span>]=<span class="string">&#x27;on&#x27;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="4-Nginx-Reverse-Proxy-Configuration"><a href="#4-Nginx-Reverse-Proxy-Configuration" class="headerlink" title="4. Nginx Reverse Proxy Configuration"></a>4. Nginx Reverse Proxy Configuration</h2><p>The N100 Nginx acts as the traffic dispatcher, routing by <code>Host</code> header to the appropriate backend. The blog-specific block:</p>
-<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /etc/nginx/sites-available/chenyun-proxy</span></span><br><span class="line"><span class="section">server</span> &#123;</span><br><span class="line">    <span class="attribute">listen</span> <span class="number">80</span>;</span><br><span class="line">    <span class="attribute">server_name</span> blog.chenyun.org;</span><br><span class="line"></span><br><span class="line">    <span class="section">location</span> / &#123;</span><br><span class="line">        <span class="attribute">proxy_pass</span> http://127.0.0.1:8081;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> Host <span class="variable">$host</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Real-IP <span class="variable">$remote_addr</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Forwarded-For <span class="variable">$proxy_add_x_forwarded_for</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Forwarded-Proto https;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>Note that <code>X-Forwarded-Proto</code> is hardcoded to <code>https</code> — this is correct because HTTPS termination happens on the Lightsail VPS before traffic enters the FRP tunnel. Without this, WordPress would generate <code>http://</code> URLs for all assets and redirect loops would occur on login.</p>
-<h3 id="Static-Asset-Acceleration"><a href="#Static-Asset-Acceleration" class="headerlink" title="Static Asset Acceleration"></a>Static Asset Acceleration</h3><p>A separate location block caches immutable assets for 7 days, reducing FRP tunnel bandwidth usage:</p>
-<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">location</span> <span class="regexp">~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$</span> &#123;</span><br><span class="line">    <span class="attribute">proxy_pass</span> http://127.0.0.1:8081;</span><br><span class="line">    <span class="attribute">proxy_set_header</span> Host <span class="variable">$host</span>;</span><br><span class="line">    <span class="attribute">proxy_set_header</span> X-Real-IP <span class="variable">$remote_addr</span>;</span><br><span class="line">    <span class="attribute">proxy_set_header</span> X-Forwarded-For <span class="variable">$proxy_add_x_forwarded_for</span>;</span><br><span class="line">    <span class="attribute">proxy_set_header</span> X-Forwarded-Proto https;</span><br><span class="line">    <span class="attribute">expires</span> <span class="number">7d</span>;</span><br><span class="line">    <span class="attribute">add_header</span> Cache-Control <span class="string">&quot;public, immutable&quot;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<hr>
-<h2 id="5-FRP-Tunnel-Integration"><a href="#5-FRP-Tunnel-Integration" class="headerlink" title="5. FRP Tunnel Integration"></a>5. FRP Tunnel Integration</h2><p>The blog is accessed through a TCP tunnel that forwards all HTTP traffic from the Lightsail VPS to the N100:</p>
-<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /etc/frp/frpc.ini (N100 side)</span></span><br><span class="line"><span class="section">[common]</span></span><br><span class="line"><span class="attr">server_addr</span> = <span class="number">52.220</span>.<span class="number">247.252</span></span><br><span class="line"><span class="attr">server_port</span> = <span class="number">7443</span></span><br><span class="line"><span class="attr">token</span> = chenyun-frp-<span class="number">2026</span></span><br><span class="line"><span class="attr">tcp_mux</span> = <span class="literal">true</span></span><br><span class="line"><span class="attr">login_fail_exit</span> = <span class="literal">false</span></span><br><span class="line"></span><br><span class="line"><span class="section">[nginx]</span></span><br><span class="line"><span class="attr">type</span> = tcp</span><br><span class="line"><span class="attr">local_ip</span> = <span class="number">127.0</span>.<span class="number">0.1</span></span><br><span class="line"><span class="attr">local_port</span> = <span class="number">80</span></span><br><span class="line"><span class="attr">remote_port</span> = <span class="number">7444</span></span><br></pre></td></tr></table></figure>
-
-<p>On the VPS side, Nginx receives HTTPS traffic on <code>blog.chenyun.org</code>, terminates SSL, and proxies to the FRP tunnel endpoint:</p>
-<figure class="highlight nginx"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Lightsail VPS Nginx (simplified)</span></span><br><span class="line"><span class="section">server</span> &#123;</span><br><span class="line">    <span class="attribute">listen</span> <span class="number">443</span> ssl http2;</span><br><span class="line">    <span class="attribute">server_name</span> blog.chenyun.org;</span><br><span class="line"></span><br><span class="line">    <span class="attribute">ssl_certificate</span> /etc/letsencrypt/live/chenyun.org/fullchain.pem;</span><br><span class="line">    <span class="attribute">ssl_certificate_key</span> /etc/letsencrypt/live/chenyun.org/privkey.pem;</span><br><span class="line"></span><br><span class="line">    <span class="section">location</span> / &#123;</span><br><span class="line">        <span class="attribute">proxy_pass</span> http://127.0.0.1:7444;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> Host blog.chenyun.org;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Real-IP <span class="variable">$remote_addr</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Forwarded-For <span class="variable">$proxy_add_x_forwarded_for</span>;</span><br><span class="line">        <span class="attribute">proxy_set_header</span> X-Forwarded-Proto https;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>The complete path: <strong>Internet → VPS:443 (SSL) → VPS:7444 (FRP) → N100:80 (Nginx) → N100:8081 (Docker WordPress)</strong>.</p>
-<hr>
-<h2 id="6-Problems-Encountered-and-Resolutions"><a href="#6-Problems-Encountered-and-Resolutions" class="headerlink" title="6. Problems Encountered and Resolutions"></a>6. Problems Encountered and Resolutions</h2><h3 id="6-1-X-Forwarded-Proto-Redirect-Loop"><a href="#6-1-X-Forwarded-Proto-Redirect-Loop" class="headerlink" title="6.1 X-Forwarded-Proto Redirect Loop"></a>6.1 X-Forwarded-Proto Redirect Loop</h3><p><strong>Symptom:</strong> After initial deployment, accessing <code>https://blog.chenyun.org/wp-admin/</code> caused an infinite redirect loop (<code>https→http→https→http</code>).</p>
-<p><strong>Root Cause:</strong> WordPress’s <code>FORCE_SSL_LOGIN</code> and <code>FORCE_SSL_ADMIN</code> redirect to <code>https://</code>, but without a correct <code>X-Forwarded-Proto</code> header, WordPress thought the request was plain HTTP and kept redirecting.</p>
-<p><strong>Resolution:</strong> Three fixes applied in combination:</p>
-<ol>
-<li>Added <code>proxy_set_header X-Forwarded-Proto https;</code> to the N100 Nginx blog location block (hardcoded, since SSL terminates at VPS)</li>
-<li>Added the <code>$_SERVER[&#39;HTTPS&#39;]=&#39;on&#39;</code> override in <code>wp-config.php</code> based on the forwarded header</li>
-<li>Set <code>define(&#39;FORCE_SSL_LOGIN&#39;, true);</code> in <code>wp-config.php</code></li>
-</ol>
-<h3 id="6-2-MariaDB-Container-Name-Collision"><a href="#6-2-MariaDB-Container-Name-Collision" class="headerlink" title="6.2 MariaDB Container Name Collision"></a>6.2 MariaDB Container Name Collision</h3><p><strong>Symptom:</strong> After a system reboot, the MariaDB container failed to start because a stale MySQL 8.0 container (<code>hanyan-db</code>) had already bound port 3306 on the Docker network.</p>
-<p><strong>Root Cause:</strong> The HanyanOS agent database (<code>hanyan-db</code>, MySQL 8.0) and the blog database (<code>serena-db</code>, MariaDB 10.11) both expose port 3306 internally. Docker allows multiple containers on the same bridge network as long as port 3306 isn’t published to the host — but on container restart, the health check for <code>serena-db</code> timed out because it couldn’t initialize InnoDB.</p>
-<p><strong>Resolution:</strong> Ensured both containers are on the same Docker network (<code>serena-net</code>) and rely on Docker’s internal DNS (service name resolution) rather than port conflicts. The <code>hanyan-db</code> exposes 3306 only on host port 3307, leaving no port conflict.</p>
-<h3 id="6-3-Plugin-Auto-Update-Failures-Behind-FRP"><a href="#6-3-Plugin-Auto-Update-Failures-Behind-FRP" class="headerlink" title="6.3 Plugin Auto-Update Failures Behind FRP"></a>6.3 Plugin Auto-Update Failures Behind FRP</h3><p><strong>Symptom:</strong> WordPress plugin and theme auto-updates consistently failed with <code>cURL error 28: Connection timed out</code> or <code>cURL error 7: Failed to connect</code>.</p>
-<p><strong>Root Cause:</strong> WordPress’s update mechanism makes outbound HTTP connections to <code>api.wordpress.org</code>, <code>downloads.wordpress.org</code>, and <code>ps.w.org</code>. From the N100 behind NAT, these connections exit through the home ISP and are subject to inconsistent routing and DNS resolution.</p>
-<p><strong>Resolution:</strong> Two mitigations:</p>
-<ol>
-<li><strong>Increased PHP timeout</strong>: Added <code>define(&#39;WP_HTTP_BLOCK_EXTERNAL&#39;, false);</code> and ensured the PHP <code>max_execution_time</code> is set to 300s in the container</li>
-<li><strong>Manual update workflow</strong>: All major updates are performed via <code>docker exec serena-wp wp-cli ...</code> using WP-CLI, which has better error handling. For automated minor updates, added a cron entry:</li>
-</ol>
-<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /etc/cron.d/wordpress-updates</span></span><br><span class="line">0 3 * * 1 michael docker <span class="built_in">exec</span> serena-wp wp plugin update --all --quiet</span><br><span class="line">0 3 * * 1 michael docker <span class="built_in">exec</span> serena-wp wp theme update --all --quiet</span><br><span class="line">0 4 * * 1 michael docker <span class="built_in">exec</span> serena-wp wp core update --minor --quiet</span><br></pre></td></tr></table></figure>
-
-<h3 id="6-4-MySQL-Memory-Pressure-on-N100"><a href="#6-4-MySQL-Memory-Pressure-on-N100" class="headerlink" title="6.4 MySQL Memory Pressure on N100"></a>6.4 MySQL Memory Pressure on N100</h3><p><strong>Symptom:</strong> After running for 3-4 days, the N100’s 8GB RAM was nearly exhausted, with MariaDB consuming 1.2GB.</p>
-<p><strong>Root Cause:</strong> MariaDB’s default <code>innodb_buffer_pool_size</code> is set to 80% of available memory on Docker (per the official image’s auto-configuration script). On an 8GB system running multiple containers (Stalwart, Qdrant, MySQL 8.0), this caused OOM kills.</p>
-<p><strong>Resolution:</strong> Capped InnoDB buffer pool to 256MB via a custom MariaDB configuration mounted into the container:</p>
-<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># /home/michael/data/mysql-data/my.cnf</span></span><br><span class="line"><span class="section">[mysqld]</span></span><br><span class="line"><span class="attr">innodb_buffer_pool_size</span> = <span class="number">256</span>M</span><br><span class="line"><span class="attr">innodb_log_file_size</span> = <span class="number">64</span>M</span><br><span class="line"><span class="attr">max_connections</span> = <span class="number">50</span></span><br><span class="line"><span class="attr">query_cache_type</span> = <span class="number">0</span></span><br><span class="line"><span class="attr">performance_schema</span> = <span class="literal">OFF</span></span><br></pre></td></tr></table></figure>
-
-<p>Applied by bind-mounting into the container:</p>
-<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">services:</span></span><br><span class="line">  <span class="attr">serena-db:</span></span><br><span class="line">    <span class="attr">volumes:</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">/home/michael/data/mysql-data:/var/lib/mysql</span></span><br><span class="line">      <span class="bullet">-</span> <span class="string">/home/michael/data/mysql-data/my.cnf:/etc/mysql/conf.d/my.cnf:ro</span></span><br></pre></td></tr></table></figure>
-
-<p>This reduced MariaDB’s idle memory from 1.2GB to ~180MB.</p>
-<h3 id="6-5-Health-Check-Race-Condition"><a href="#6-5-Health-Check-Race-Condition" class="headerlink" title="6.5 Health Check Race Condition"></a>6.5 Health Check Race Condition</h3><p><strong>Symptom:</strong> On <code>docker compose up</code>, WordPress occasionally started before MariaDB’s health check passed, resulting in <code>Error establishing a database connection</code>.</p>
-<p><strong>Root Cause:</strong> Docker Compose’s <code>depends_on</code> with <code>condition: service_healthy</code> is evaluated once at startup. If MariaDB’s health check takes longer than expected (cold start with InnoDB recovery), Compose proceeds before the DB is truly ready.</p>
-<p><strong>Resolution:</strong> Added a <code>restart: unless-stopped</code> policy and set MariaDB’s health check <code>start_period</code> to 30 seconds to account for cold-start InnoDB initialization. WordPress will crash-loop until MariaDB passes health — typically 2-3 restarts (about 15 seconds).</p>
-<hr>
-<h2 id="7-Security-Posture"><a href="#7-Security-Posture" class="headerlink" title="7. Security Posture"></a>7. Security Posture</h2><table>
-<thead>
-<tr>
-<th>Layer</th>
-<th>Measure</th>
-</tr>
-</thead>
-<tbody><tr>
-<td><strong>Transport</strong></td>
-<td>TLS 1.3 terminated at VPS; FRP tunnel carries plain HTTP over VPC</td>
-</tr>
-<tr>
-<td><strong>Database isolation</strong></td>
-<td>MariaDB not exposed on any host port; only accessible via Docker network DNS</td>
-</tr>
-<tr>
-<td><strong>Admin access</strong></td>
-<td><code>wp-admin</code> forced HTTPS via <code>FORCE_SSL_LOGIN</code>; Adminer at <code>db.chenyun.org</code> requires HTTP Basic Auth in Nginx</td>
-</tr>
-<tr>
-<td><strong>File permissions</strong></td>
-<td>WordPress files in <code>/home/michael/www/wordpress</code> owned by <code>www-data:www-data</code> inside container; host user <code>michael</code> has group access</td>
-</tr>
-<tr>
-<td><strong>Backups</strong></td>
-<td>Daily <code>wp db export</code> via cron; MySQL data directory included in HanyanOS nightly rsync</td>
-</tr>
-<tr>
-<td><strong>Rate limiting</strong></td>
-<td>Fail2ban watches WordPress login attempts on N100 (<code>/var/log/nginx/blog-access.log</code>)</td>
-</tr>
-<tr>
-<td><strong>Plugin hygiene</strong></td>
-<td>Only 5 plugins installed (Akismet, Jetpack, WP Super Cache, Yoast SEO, UpdraftPlus) — minimized attack surface</td>
-</tr>
-</tbody></table>
-<hr>
-<h2 id="8-Performance-Observations"><a href="#8-Performance-Observations" class="headerlink" title="8. Performance Observations"></a>8. Performance Observations</h2><table>
-<thead>
-<tr>
-<th>Metric</th>
-<th>Value</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Page load time (cached, Australia)</td>
-<td>~1.2s (includes 90ms VPS→N100 tunnel latency)</td>
-</tr>
-<tr>
-<td>Page load time (cached, US East)</td>
-<td>~2.4s (additional trans-Pacific latency)</td>
-</tr>
-<tr>
-<td>MariaDB idle memory</td>
-<td>180 MB</td>
-</tr>
-<tr>
-<td>WordPress PHP-FPM idle memory</td>
-<td>85 MB</td>
-</tr>
-<tr>
-<td>FRP tunnel throughput</td>
-<td>~45 Mbps (N100 gigabit Ethernet)</td>
-</tr>
-<tr>
-<td>Concurrent connections</td>
-<td>10-15 (typical for personal blog with bot traffic)</td>
-</tr>
-</tbody></table>
-<p>The WP Super Cache plugin generates static HTML files that bypass PHP entirely for unauthenticated visitors, reducing the average request to a single Nginx <code>try_files</code> lookup.</p>
-<hr>
-<h2 id="9-Conclusion"><a href="#9-Conclusion" class="headerlink" title="9. Conclusion"></a>9. Conclusion</h2><p>Deploying WordPress behind an FRP tunnel on NAT’d hardware is not the simplest path — but it is a resilient one. The three-hop architecture (VPS → FRP → N100 → Docker) adds complexity but provides valuable isolation: WordPress never sees the public internet directly, the database is not exposed, and the entire stack can be torn down and rebuilt from Compose without touching external configuration. For a personal blog serving a few thousand monthly visitors, the performance penalty is negligible, and the operational flexibility is considerable.</p>
-<p><strong>Key takeaway:</strong> The hardest part of a tunneled WordPress deployment is not the infrastructure — it’s the HTTPS detection and header forwarding. Get <code>X-Forwarded-Proto</code> right, and everything else follows.</p>
-<p><strong>Next in series:</strong> OpenClaw Multi-Agent Scheduling — Orchestrating 7 Agents on N100.</p>
-
       
     </div>
 
