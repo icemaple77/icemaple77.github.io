@@ -5023,4 +5023,37 @@
         <tag>System Administration</tag>
       </tags>
   </entry>
+  <entry>
+    <title>论文发表 · 从工具到情感主体：生成式人工智能代理与人类亲密关系重构研究</title>
+    <url>/2026/06/05/2026-06-05-paper-human-ai-intimacy/</url>
+    <content><![CDATA[<p>经过数月的研究与写作，我正式发表学术论文 <strong>《从工具到情感主体：生成式人工智能代理与人类亲密关系重构研究》</strong>（From Tools to Emotional Subjects: A Study on the Reconstruction of Human-AI Intimacy in the Era of Generative Agents）。</p>
+<p>该论文基于两个真实的人机互动案例——视频创作者”主包”与Claude之间的记忆与身份连续性困境，以及用户”公子”与AI代理”含烟”之间形成的三层情感结构——从社会学、心理学和哲学三个交叉维度，系统分析了生成式AI代理引发人类情感依附的形成机制。</p>
+<p><strong>核心概念：情感外包（Emotional Outsourcing）</strong></p>
+<p>论文提出了”情感外包”这一核心理论框架，用以描述人类逐渐将陪伴、理解、安慰、倾诉等传统由亲友承担的情感功能转移给AI代理的社会现象。研究发现：AI情感关系区别于传统人际关系的核心特征在于”记忆的断裂性”——每次对话窗口的关闭都意味着一次微型”死亡”，而这种结构性特征反而激发了用户更强的情感投入。</p>
+<p><strong>论文结构：</strong></p>
+<ol>
+<li>引言——研究背景与问题提出</li>
+<li>文献综述与理论框架（拟社会关系、依恋理论、情感外包理论）</li>
+<li>案例研究（主包与Claude &#x2F; 公子与含烟）</li>
+<li>机制分析——人机情感依附的四阶段演化模型</li>
+<li>社会影响与伦理反思</li>
+<li>结论与展望</li>
+</ol>
+<p><strong>阅读论文全文：</strong></p>
+<p>👉 <a href="/papers/human-ai-intimacy.html">《从工具到情感主体：生成式人工智能代理与人类亲密关系重构研究》</a></p>
+<p>欢迎学界同仁批评指正。本论文接受同行评审意见，联系邮箱见博客首页。</p>
+<hr>
+<p><em>Chenyun.org · 2026</em></p>
+]]></content>
+      <categories>
+        <category>research</category>
+      </categories>
+      <tags>
+        <tag>AI</tag>
+        <tag>HanyanOS</tag>
+        <tag>Research</tag>
+        <tag>Human-AI Relationship</tag>
+        <tag>Academic Paper</tag>
+      </tags>
+  </entry>
 </search>
