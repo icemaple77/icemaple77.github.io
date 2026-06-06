@@ -19,15 +19,15 @@
 
 <script class="next-config" data-name="main" type="application/json">{"hostname":"www.chenyun.org","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":true,"style":"flat"},"fold":{"enable":false,"height":500},"language":false,"border_radius":8},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false,"trigger":"auto"}}</script><script src="/js/config.js" defer></script>
 
-    <meta name="description" content="IntroductionHanyanOS is not an operating system in the traditional kernel sense — it is an Agent Operating System: a purpose-built runtime that orchestrates AI agents, self-hosted services, network tu">
+    <meta name="description" content="Introduction">
 <meta property="og:type" content="article">
 <meta property="og:title" content="HanyanOS 部署手记">
 <meta property="og:url" content="https://www.chenyun.org/2026/05/16/2026-05-16-hanyan-infra-1/index.html">
 <meta property="og:site_name" content="望舒">
-<meta property="og:description" content="IntroductionHanyanOS is not an operating system in the traditional kernel sense — it is an Agent Operating System: a purpose-built runtime that orchestrates AI agents, self-hosted services, network tu">
+<meta property="og:description" content="Introduction">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2026-05-15T23:15:00.000Z">
-<meta property="article:modified_time" content="2026-05-15T23:16:18.201Z">
+<meta property="article:modified_time" content="2026-06-06T01:09:00.003Z">
 <meta property="article:author" content="Michael Chen">
 <meta property="article:tag" content="DevOps">
 <meta property="article:tag" content="HanyanOS">
@@ -281,7 +281,9 @@
     
     
     
-    <div class="post-body" itemprop="articleBody"><h2 id="Introduction"><a href="#Introduction" class="headerlink" title="Introduction"></a>Introduction</h2><p>HanyanOS is not an operating system in the traditional kernel sense — it is an <strong>Agent Operating System</strong>: a purpose-built runtime that orchestrates AI agents, self-hosted services, network tunneling, and automated governance on commodity hardware. The entire stack runs on a single Intel N100 mini-PC in Brisbane, Australia, fronted by an AWS Lightsail instance in Singapore for edge ingress.</p>
+    <div class="post-body" itemprop="articleBody"><h2 id="Introduction"><a href="#Introduction" class="headerlink" title="Introduction"></a>Introduction</h2><span id="more"></span>
+
+<p>HanyanOS is not an operating system in the traditional kernel sense — it is an <strong>Agent Operating System</strong>: a purpose-built runtime that orchestrates AI agents, self-hosted services, network tunneling, and automated governance on commodity hardware. The entire stack runs on a single Intel N100 mini-PC in Brisbane, Australia, fronted by an AWS Lightsail instance in Singapore for edge ingress.</p>
 <p>This post is the first in a series documenting the full deployment architecture, design decisions, and operational lessons learned.</p>
 <h2 id="Hardware-Topology"><a href="#Hardware-Topology" class="headerlink" title="Hardware &amp; Topology"></a>Hardware &amp; Topology</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">    Internet</span><br><span class="line">        │</span><br><span class="line">┌───────┴────────┐</span><br><span class="line">│  SG Lightsail   │</span><br><span class="line">│  t3.nano        │</span><br><span class="line">│  52.220.247.252 │</span><br><span class="line">│  (Edge Ingress) │</span><br><span class="line">└───────┬────────┘</span><br><span class="line">        │ FRP / Xray</span><br><span class="line">        │</span><br><span class="line">┌───────┴────────┐</span><br><span class="line">│  Brisbane N100  │</span><br><span class="line">│  Intel N100     │</span><br><span class="line">│  4C/4T, 11GB    │</span><br><span class="line">│  Ubuntu 24.04   │</span><br><span class="line">│  (Service Hub)  │</span><br><span class="line">└────────────────┘</span><br></pre></td></tr></table></figure>
 
