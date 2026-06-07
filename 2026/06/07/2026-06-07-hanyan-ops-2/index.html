@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 8.1.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha256-VHqXKFhhMxcpubYf9xiWdCiojEbY9NexQ4jh8AxbvcM=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"www.chenyun.org","root":"/","images":"/images","scheme":"Gemini","darkmode":false,"version":"8.27.0","exturl":false,"sidebar":{"position":"left","width_expanded":320,"width_dual_column":240,"display":"post","padding":18,"offset":12},"hljswrap":true,"codeblock":{"theme":{"light":"default","dark":"stackoverflow-dark"},"prism":{"light":"prism","dark":"prism-dark"},"copy_button":{"enable":true,"style":"flat"},"fold":{"enable":false,"height":500},"language":false,"border_radius":8},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"duration":200,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"fadeInDown","post_body":"fadeInDown","coll_header":"fadeInLeft","sidebar":"fadeInUp"}},"i18n":{"placeholder":"搜索...","empty":"没有找到任何搜索结果：${query}","hits_time":"找到 ${hits} 个搜索结果（用时 ${time} 毫秒）","hits":"找到 ${hits} 个搜索结果"},"path":"/search.xml","localsearch":{"enable":true,"top_n_per_article":1,"unescape":false,"preload":false,"trigger":"auto"}}</script><script src="/js/config.js" defer></script>
+
+    <meta name="description" content="1. 引言">
+<meta property="og:type" content="article">
+<meta property="og:title" content="HanyanOS 运维手记">
+<meta property="og:url" content="https://www.chenyun.org/2026/06/07/2026-06-07-hanyan-ops-2/index.html">
+<meta property="og:site_name" content="望舒">
+<meta property="og:description" content="1. 引言">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-06-07T10:00:00.000Z">
+<meta property="article:modified_time" content="2026-06-07T08:02:06.053Z">
+<meta property="article:author" content="Michael Chen">
+<meta property="article:tag" content="Container">
+<meta property="article:tag" content="DevOps">
+<meta property="article:tag" content="Docker">
+<meta property="article:tag" content="HanyanOS">
+<meta property="article:tag" content="System Administration">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="https://www.chenyun.org/2026/06/07/2026-06-07-hanyan-ops-2/">
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"zh-CN","comments":true,"permalink":"https://www.chenyun.org/2026/06/07/2026-06-07-hanyan-ops-2/","path":"2026/06/07/2026-06-07-hanyan-ops-2/","title":"HanyanOS 运维手记"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>HanyanOS 运维手记 | 望舒</title>
+  
+
+
+
+
+
+
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous" defer></script>
+<script src="/js/utils.js" defer></script><script src="/js/motion.js" defer></script><script src="/js/sidebar.js" defer></script><script src="/js/next-boot.js" defer></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hexo-generator-searchdb/1.5.0/search.js" integrity="sha256-xFC6PJ82SL9b3WkGjFavNiA9gm5z6UBxWPiu4CYjptg=" crossorigin="anonymous" defer></script>
+<script src="/js/third-party/search/local-search.js" defer></script>
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">望舒</p>
+      <i class="logo-line"></i>
+    </a>
+      <p class="site-subtitle" itemprop="description">人的一生注定会遇到两个人一个惊艳了时光，一个温柔了岁月</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="搜索" role="button">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a></li><li class="menu-item menu-item-categories"><a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a></li><li class="menu-item menu-item-tags"><a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a></li><li class="menu-item menu-item-about"><a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>关于</a></li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+      <div class="search-header">
+        <span class="search-icon">
+          <i class="fa fa-search"></i>
+        </span>
+        <div class="search-input-container">
+          <input autocomplete="off" autocapitalize="off" maxlength="80"
+                placeholder="搜索..." spellcheck="false"
+                type="search" class="search-input">
+        </div>
+        <span class="popup-btn-close" role="button">
+          <i class="fa fa-times-circle"></i>
+        </span>
+      </div>
+      <div class="search-result-container">
+        <div class="search-result-icon">
+          <i class="fa fa-spinner fa-pulse fa-5x"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E5%BC%95%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">1. 引言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E5%AE%B9%E5%99%A8%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E5%85%A8%E6%99%AF"><span class="nav-number">2.</span> <span class="nav-text">2. 容器生命周期全景</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-Running-Up-%E2%80%94-%E6%B4%BB%E7%9D%80%E7%9A%84%E5%AE%B9%E5%99%A8"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 Running (Up) — 活着的容器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-Created-%E2%80%94-%E6%B4%BB%E5%9C%A8%E2%80%9D%E5%88%9B%E5%BB%BA%E2%80%9D%E7%9A%84%E4%B8%A4%E4%B8%AA%E5%B9%BD%E7%81%B5"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 Created — 活在”创建”的两个幽灵</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-Exited-0-%E2%80%94-%E4%BD%93%E9%9D%A2%E7%9A%84%E9%80%80%E5%BD%B9"><span class="nav-number">2.3.</span> <span class="nav-text">2.3 Exited (0) — 体面的退役</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-Exited-137-%E2%80%94-OOM-%E6%9D%80%E6%89%8B%E7%9A%84%E5%AD%90%E5%BC%B9"><span class="nav-number">2.4.</span> <span class="nav-text">2.4 Exited (137) — OOM 杀手的子弹</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-5-Exited-1-%E2%80%94-%E4%B8%8D%E6%98%8E%E5%8E%9F%E5%9B%A0%E7%9A%84%E6%9A%B4%E6%AF%99"><span class="nav-number">2.5.</span> <span class="nav-text">2.5 Exited (1) — 不明原因的暴毙</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E9%95%9C%E5%83%8F%E7%AE%A1%E7%90%86%EF%BC%9A%E6%8B%89%E5%8F%96%E3%80%81%E6%9B%B4%E6%96%B0%E3%80%81GC"><span class="nav-number">3.</span> <span class="nav-text">3. 镜像管理：拉取、更新、GC</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-Pull-%E4%B8%8E%E7%89%88%E6%9C%AC%E9%94%81%E5%AE%9A"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 Pull 与版本锁定</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-docker-pull-%E2%80%94-%E5%B8%B8%E8%A7%84%E6%9B%B4%E6%96%B0%E6%B5%81%E7%A8%8B"><span class="nav-number">3.2.</span> <span class="nav-text">3.2 docker pull — 常规更新流程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-3-%E9%95%9C%E5%83%8F%E5%B1%82%E4%B8%8E%E7%A3%81%E7%9B%98%E5%8D%A0%E7%94%A8"><span class="nav-number">3.3.</span> <span class="nav-text">3.3 镜像层与磁盘占用</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E5%8D%B7%E7%9A%84%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F"><span class="nav-number">4.</span> <span class="nav-text">4. 卷的生命周期</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#4-1-%E6%8C%81%E4%B9%85%E6%95%B0%E6%8D%AE%E2%80%94%E2%80%94%E5%8D%B7%E5%B0%B1%E6%98%AF%E4%B8%80%E5%88%87"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 持久数据——卷就是一切</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#4-2-%E5%AD%A4%E7%AB%8B%E5%8D%B7%E2%80%94%E2%80%94%E5%8D%A0%E7%9D%80%E8%8C%85%E5%9D%91%E4%B8%8D%E6%8B%89%E5%B1%8E"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 孤立卷——占着茅坑不拉屎</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-%E5%AE%B9%E5%99%A8%E7%BA%A7%E7%94%9F%E5%91%BD%E5%91%A8%E6%9C%9F%E9%92%A9%E5%AD%90"><span class="nav-number">5.</span> <span class="nav-text">5. 容器级生命周期钩子</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#5-1-HEALTHCHECK-%E4%BD%9C%E4%B8%BA%E2%80%9D%E8%BF%90%E8%A1%8C%E4%B8%AD%E2%80%9D%E7%A1%AE%E8%AE%A4"><span class="nav-number">5.1.</span> <span class="nav-text">5.1 HEALTHCHECK 作为”运行中”确认</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#5-2-docker-events-%E2%80%94-%E5%AE%B9%E5%99%A8%E5%85%AB%E5%8D%A6%E7%9B%91%E5%90%AC%E5%99%A8"><span class="nav-number">5.2.</span> <span class="nav-text">5.2 docker events — 容器八卦监听器</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-docker-compose-vs-%E6%89%8B%E5%8A%A8%E7%AE%A1%E7%90%86"><span class="nav-number">6.</span> <span class="nav-text">6. docker-compose vs 手动管理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#7-N100-%E7%9A%84%E4%B8%B4%E7%95%8C%E5%80%BC%E2%80%94%E2%80%94%E4%BB%80%E4%B9%88%E6%97%B6%E5%80%99-Docker-%E4%BC%9A%E5%90%83%E6%8E%89%E4%BD%A0%E7%9A%84%E7%B3%BB%E7%BB%9F"><span class="nav-number">7.</span> <span class="nav-text">7. N100 的临界值——什么时候 Docker 会吃掉你的系统</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Michael Chen"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">Michael Chen</p>
+  <div class="site-description" itemprop="description">Michael Chen 的技术博客，关注 AI、云计算、软件工程和科技趋势</div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">35</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">分类</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">58</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author animated">
+      <span class="links-of-author-item">
+        <a href="https://github.com/michaelchen" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;michaelchen" rel="noopener me" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://linkedin.com/in/icemaple77" title="LinkedIn → https:&#x2F;&#x2F;linkedin.com&#x2F;in&#x2F;icemaple77" rel="noopener me" target="_blank"><i class="fab fa-linkedin fa-fw"></i>LinkedIn</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://ai.chenyun.org/" title="AI → https:&#x2F;&#x2F;ai.chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-robot fa-fw"></i>AI</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.chenyun.org/" title="Blog → https:&#x2F;&#x2F;blog.chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-blog fa-fw"></i>Blog</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:michael@chenyun.org" title="Email → mailto:michael@chenyun.org" rel="noopener me" target="_blank"><i class="fas fa-envelope fa-fw"></i>Email</a>
+      </span>
+  </div>
+  <div class="cc-license animated" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" class="cc-opacity" rel="noopener" target="_blank"><img src="https://cdnjs.cloudflare.com/ajax/libs/creativecommons-vocabulary/2020.11.3/assets/license_badges/small/by_nc_sa.svg" alt="Creative Commons"></a>
+  </div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://www.chenyun.org/2026/06/07/2026-06-07-hanyan-ops-2/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="Michael Chen">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="望舒">
+      <meta itemprop="description" content="Michael Chen 的技术博客，关注 AI、云计算、软件工程和科技趋势">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="HanyanOS 运维手记 | 望舒">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          HanyanOS 运维手记
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">发表于</span>
+
+      <time title="创建时间：2026-06-07 20:00:00" itemprop="dateCreated datePublished" datetime="2026-06-07T20:00:00+10:00">2026-06-07</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">分类于</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/tech/" itemprop="url" rel="index"><span itemprop="name">tech</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="1-引言"><a href="#1-引言" class="headerlink" title="1. 引言"></a>1. 引言</h2><span id="more"></span>
+
+<p>当你在一台 N100 上跑着 21 个容器、34 个镜像和 21 个卷——而系统盘只有 120GB——容器的生命周期就不是”docker run 一下就行”的事了。</p>
+<p>让我看一下现在的状态：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">$ docker system df</span><br><span class="line">TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE</span><br><span class="line">Images          34        20        21.42GB   19.18GB (89%)  ← 89% 可回收</span><br><span class="line">Containers      21        10        164.4MB   101MB (61%)</span><br><span class="line">Local Volumes   21        4         1.178GB   980MB (83%)    ← 83% 是垃圾</span><br><span class="line">Build Cache     0         0         0B        0B</span><br></pre></td></tr></table></figure>
+
+<p><strong>89% 的镜像体积是垃圾，83% 的卷数据没有在用。</strong> 这不是运维失误——这是容器化应用的天然属性：镜像层堆积、退出容器的 overlay 残留、孤立卷的 <code>_data</code> 目录在磁盘深处悄悄膨胀。如果不定时清理，一个 120GB 的系统盘会被 Docker 自己吃光，而且毫无感知。</p>
+<p>这篇文章记录 HanyanOS 上的容器全生命周期管理：从拉取镜像到最终清理，”生老病死”每个阶段的实操和教训。</p>
+<h2 id="2-容器生命周期全景"><a href="#2-容器生命周期全景" class="headerlink" title="2. 容器生命周期全景"></a>2. 容器生命周期全景</h2><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">拉取镜像</span><br><span class="line">   │</span><br><span class="line"> docker pull / compose pull</span><br><span class="line">   │</span><br><span class="line">   ▼</span><br><span class="line">创建容器 / 启动</span><br><span class="line">   │</span><br><span class="line"> docker create → docker start</span><br><span class="line"> docker run（创建+启动一步到位）</span><br><span class="line">   │</span><br><span class="line">   ▼</span><br><span class="line">运行中 (Up)       ← 日常状态</span><br><span class="line">   │</span><br><span class="line">   ├── 主动停止 → Exited (0)    ← 正常退役</span><br><span class="line">   ├── OOM 杀死 → Exited (137)  ← 资源不足</span><br><span class="line">   ├── 崩溃退出 → Exited (1)    ← 配置错误或代码 bug</span><br><span class="line">   ├── 重启策略 → 回到运行中     ← unless-stopped / always</span><br><span class="line">   └── 永远 Created             ← 忘了 docker start 的孤儿</span><br><span class="line">   │</span><br><span class="line">   ▼</span><br><span class="line">清理</span><br><span class="line">   docker rm / compose down / docker system prune</span><br></pre></td></tr></table></figure>
+
+<h3 id="2-1-Running-Up-—-活着的容器"><a href="#2-1-Running-Up-—-活着的容器" class="headerlink" title="2.1 Running (Up) — 活着的容器"></a>2.1 Running (Up) — 活着的容器</h3><p>HanyanOS 当前有 10 个活跃容器，持续运行的天数从 2 到 5 天不等：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">CONTAINER ID   NAMES                     STATUS                    IMAGE</span><br><span class="line">a8454e75741f   speedtest                 Up 28 hours               adolfintel/speedtest</span><br><span class="line">859f3873b4b3   headscale                 Up 45 hours               headscale/headscale:latest</span><br><span class="line">60e7971ec530   crawl4ai                  Up 2 days (healthy)       unclecode/crawl4ai:latest</span><br><span class="line">cb18cfb48738   ai-redis                  Up 2 days                 redis:7-alpine</span><br><span class="line">9cba38a9311b   snappymail                Up 3 days                 djmaze/snappymail:latest</span><br><span class="line">a384456b580d   stalwart-mail             Up 4 days (healthy)       stalwartlabs/stalwart:latest</span><br><span class="line">3d96452d83c6   serena-wp                 Up 3 days                 wordpress:6.7-php8.3-apache</span><br><span class="line">c3e99c93e897   qdrant                    Up 4 days                 qdrant/qdrant:latest</span><br><span class="line">f176c2becb6c   hanyan-db                 Up 39 hours (healthy)     mysql:8.0</span><br><span class="line">c45b46b79130   wordpress                 Up 4 days (healthy)       mariadb:10.11</span><br></pre></td></tr></table></figure>
+
+<p><strong>几个观察：</strong></p>
+<ul>
+<li><code>stalwart-mail</code> 本周期重启过一次（RestartCount 1, 启动时间距退出仅 3 分钟）——那三次启动间隔不是一个正常的”因为有更新所以重启”，更像是初始化阶段失败然后 <code>unless-stopped</code> 重试了一次。这提醒我们：<strong>重启策略不能替代健康检查。</strong> 幸好它有 HEALTHCHECK，不然可能会无限重试直到系统资源耗尽。</li>
+<li><code>crawl4ai</code> 带 <code>(healthy)</code> 标签——Docker HEALTHCHECK 在执行。它的定义值得学习（一般 crawl 类容器内存敏感，把健康检查间隔设长点可以减少虚假告警）。</li>
+<li><code>hanyan-db</code>、<code>mariadb</code>、<code>qdrant</code> 等数据库类容器全部稳定在线，这是 <code>--restart=always</code>（或 compose 里的 <code>restart: unless-stopped</code>）的功劳。</li>
+</ul>
+<p><strong>实战建议：重要容器永远带 restart policy + HEALTHCHECK。</strong> 两者缺一，深夜被 pager 叫醒的概率显著上升。</p>
+<h3 id="2-2-Created-—-活在”创建”的两个幽灵"><a href="#2-2-Created-—-活在”创建”的两个幽灵" class="headerlink" title="2.2 Created — 活在”创建”的两个幽灵"></a>2.2 Created — 活在”创建”的两个幽灵</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">0fafb52a42b1   derper                    Created                   tailscale/tailscale</span><br><span class="line">1369167d2692   stoic_mahavira            Created                   headscale/headscale:latest</span><br></pre></td></tr></table></figure>
+
+<p><code>Created</code> 状态比 Exited 更特殊：容器创建成功了，但从没人 <code>docker start</code> 过它。它分配了容器文件系统空间（几十 MB），占着 overlay 层资源，却什么也不做。</p>
+<p><strong>derper</strong> 是 Tailscale 的 DERP 中继服务器，当初可能想搭建一个私有中继节点，后来发现官方 DERP 够用就没启动。<code>stoic_mahavira</code> 大概是测试 headscale 版本时的残留。</p>
+<p>为什么它们还活着？因为 <code>docker ps</code> 默认不加 <code>-a</code> 就看不到它们。”眼不见为净”是运维大忌。</p>
+<p><strong>清理时机：</strong> 如果超过 7 天还是 Created，99% 的概率不会再用。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查找并清理 Created 超过 7 天的容器</span></span><br><span class="line">docker ps -a --filter <span class="string">&quot;status=created&quot;</span> --format <span class="string">&quot;&#123;&#123;.ID&#125;&#125; &#123;&#123;.CreatedAt&#125;&#125; &#123;&#123;.Names&#125;&#125;&quot;</span> \</span><br><span class="line">  | <span class="keyword">while</span> <span class="built_in">read</span> <span class="built_in">id</span> created name; <span class="keyword">do</span></span><br><span class="line">      created_epoch=$(<span class="built_in">date</span> -d <span class="string">&quot;<span class="variable">$created</span>&quot;</span> +%s)</span><br><span class="line">      now=$(<span class="built_in">date</span> +%s)</span><br><span class="line">      <span class="keyword">if</span> [ $((now - created_epoch)) -gt $((<span class="number">7</span>*<span class="number">86400</span>)) ]; <span class="keyword">then</span></span><br><span class="line">        docker <span class="built_in">rm</span> <span class="string">&quot;<span class="variable">$id</span>&quot;</span></span><br><span class="line">        <span class="built_in">echo</span> <span class="string">&quot;🧹 已清理 Created 容器: <span class="variable">$name</span>&quot;</span></span><br><span class="line">      <span class="keyword">fi</span></span><br><span class="line">    <span class="keyword">done</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="2-3-Exited-0-—-体面的退役"><a href="#2-3-Exited-0-—-体面的退役" class="headerlink" title="2.3 Exited (0) — 体面的退役"></a>2.3 Exited (0) — 体面的退役</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">ff596eeff995   immich_redis              Exited (0) 3 days ago     valkey/valkey:9</span><br><span class="line">57264002ca46   immich_machine_learning   Exited (143) 3 days ago   ghcr.io/immich-app/immich-machine-learning:release</span><br></pre></td></tr></table></figure>
+
+<p>Exit code 0 是最优雅的告别——进程接收到 SIGTERM，执行了清理逻辑，主动退出。Immich 的 Redis 和 PostgreSQL 都是正常退出的。这说明 Immich 在前端主动关闭时走的是 <code>docker compose down</code> 的干净路径。</p>
+<p>Exit code 143 是什么？128 + 15 &#x3D; SIGTERM（向进程发送终止信号），也是”干净退出”的一种——Docker daemon 在收到 stop 命令后给容器发了 SIGTERM，容器对它做了响应。</p>
+<p><strong>这批容器为什么全部退出？</strong> 看了一下 Immich 容器的创建时间，大概率是在内存不足时被人停掉的。Immich 的 ML 模型推理在 N100 上大约要占用 1.5-2GB 内存，对 11GB 的小机器来说是个不小的负担。</p>
+<h3 id="2-4-Exited-137-—-OOM-杀手的子弹"><a href="#2-4-Exited-137-—-OOM-杀手的子弹" class="headerlink" title="2.4 Exited (137) — OOM 杀手的子弹"></a>2.4 Exited (137) — OOM 杀手的子弹</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">31ab12b92f6e   hanyan-backup             Exited (137) 13 days ago  alpine:latest</span><br></pre></td></tr></table></figure>
+
+<p>Exit code 137 &#x3D; 128 + 9 &#x3D; SIGKILL。在 Docker 语境下这几乎只意味一件事：<strong>容器被 Linux OOM Killer 杀掉了。</strong> 无法响应、没有 graceful shutdown、直接暴毙。</p>
+<p><code>hanyan-backup</code> 是一个用 <code>alpine:latest</code> 做的简单备份容器，跑 <code>restic backup</code>。restic 在备份大量文件时需要加载索引到内存中，对一个没有任何内存上限的 <code>alpine</code> 容器来说——</p>
+<blockquote>
+<p>没有 <code>--memory</code> 限制的容器可以吃掉宿主机所有内存。N100 只有 11GB RAM，restic 备份十几 GB 的 immich 数据时轻松越线。</p>
+</blockquote>
+<p><strong>教训：备份容器的内存限制非常重要。</strong> </p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># docker-compose 中正确的备份容器配置</span></span><br><span class="line"><span class="attr">services:</span></span><br><span class="line">  <span class="attr">backup:</span></span><br><span class="line">    <span class="attr">image:</span> <span class="string">alpine:latest</span></span><br><span class="line">    <span class="attr">deploy:</span></span><br><span class="line">      <span class="attr">resources:</span></span><br><span class="line">        <span class="attr">limits:</span></span><br><span class="line">          <span class="attr">memory:</span> <span class="string">512M</span>          <span class="comment"># 最多用 512MB</span></span><br><span class="line">          <span class="attr">cpus:</span> <span class="string">&#x27;0.5&#x27;</span>           <span class="comment"># 最多用半个核</span></span><br></pre></td></tr></table></figure>
+
+<p>或者一行命令时带上：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker run --memory=<span class="string">&quot;512m&quot;</span> --cpus=<span class="string">&quot;0.5&quot;</span> ...</span><br></pre></td></tr></table></figure>
+
+<p>配置了资源限制后，即使备份任务失败（OOM 里优雅退出），也不会拖垮整个系统。我的 N100 就是靠这条教训活下来的。</p>
+<h3 id="2-5-Exited-1-—-不明原因的暴毙"><a href="#2-5-Exited-1-—-不明原因的暴毙" class="headerlink" title="2.5 Exited (1) — 不明原因的暴毙"></a>2.5 Exited (1) — 不明原因的暴毙</h3><figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">c44049b608fa   agitated_almeida          Exited (1) 9 days ago      d9e853e87e55</span><br><span class="line">8f2993379459   quirky_elion              Exited (1) 9 days ago      8d82cf8fc9c1</span><br></pre></td></tr></table></figure>
+
+<p>Exit code 1 是一个综合模糊的状态：运行时错误、配置文件格式错误、依赖服务未就绪。这两个匿名名字（Docker 自动生成）告诉我它们不是通过 compose 启动的——大概率是手动 <code>docker run</code> 测试某个镜像后忘了清理。</p>
+<p><strong>运维建议：所有带名字的容器都应当通过 docker-compose 管理。</strong> 手动 <code>docker run</code> 留下的东西跟乱丢垃圾没什么区别——没人知道它是干嘛的，没人敢删，永远留在那里。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 查看匿名容器的日志，判断留还是删</span></span><br><span class="line">docker logs c44049b608fa --<span class="built_in">tail</span> 20</span><br><span class="line">docker inspect c44049b608fa --format <span class="string">&#x27;&#123;&#123;.Config.Cmd&#125;&#125;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="3-镜像管理：拉取、更新、GC"><a href="#3-镜像管理：拉取、更新、GC" class="headerlink" title="3. 镜像管理：拉取、更新、GC"></a>3. 镜像管理：拉取、更新、GC</h2><h3 id="3-1-Pull-与版本锁定"><a href="#3-1-Pull-与版本锁定" class="headerlink" title="3.1 Pull 与版本锁定"></a>3.1 Pull 与版本锁定</h3><p><code>docker pull</code> 是一切的开端。HanyanOS 上的容器镜像有两个来源：</p>
+<ul>
+<li><strong>固定标签</strong>：如 <code>mysql:8.0</code>、<code>wordpress:6.7-php8.3-apache</code> — 大版本可控</li>
+<li><strong>latest 标签</strong>：如 <code>headscale/headscale:latest</code>、<code>snappymail:latest</code> — 需要注意</li>
+</ul>
+<p><code>latest</code> 不是恶魔，但在生产使用时要习惯：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 更新前查看变更日志</span></span><br><span class="line">docker pull n8nio/n8n:latest   <span class="comment"># 看最新版本有没有 breaking change</span></span><br></pre></td></tr></table></figure>
+
+<p>N100 上 34 个镜像占用了 21.42GB，其中 19.18GB 可以回收。这是什么概念？系统盘 120GB，光 Docker 镜像就吃掉了 17.8% 的空间，而其中 90.5% 是旧版本层。</p>
+<h3 id="3-2-docker-pull-—-常规更新流程"><a href="#3-2-docker-pull-—-常规更新流程" class="headerlink" title="3.2 docker pull — 常规更新流程"></a>3.2 docker pull — 常规更新流程</h3><p>HanyanOS 的容器有两种更新模式：</p>
+<p><strong>模式 A：docker-compose 管理（推荐）</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> /path/to/service</span><br><span class="line">docker compose pull          <span class="comment"># 拉取新镜像</span></span><br><span class="line">docker compose up -d         <span class="comment"># 重新创建并启动容器</span></span><br><span class="line">docker image prune           <span class="comment"># 清理旧镜像</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>模式 B：手动更新</strong>（适用于一次性任务容器）</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">docker pull redis:7-alpine</span><br><span class="line">docker stop ai-redis &amp;&amp; docker <span class="built_in">rm</span> ai-redis</span><br><span class="line">docker run -d --name ai-redis ... redis:7-alpine</span><br></pre></td></tr></table></figure>
+
+<h3 id="3-3-镜像层与磁盘占用"><a href="#3-3-镜像层与磁盘占用" class="headerlink" title="3.3 镜像层与磁盘占用"></a>3.3 镜像层与磁盘占用</h3><p>每个 Docker 镜像由只读层组成。当你 <code>docker pull nginx:latest</code>，Docker 拉取的是这个版本的新层加上和旧版本共享的层。Linux 的 overlay2 文件系统使得相同的层只存储一次——这是为什么删镜像能够释放惊人空间的原因。</p>
+<p>看下面的数据：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">$ docker system df</span><br><span class="line">Images     34        20        21.42GB   19.18GB (89%)</span><br></pre></td></tr></table></figure>
+
+<p>89% 可回收意味着大部分镜像层没有被任何活跃容器引用。常见的模式是：</p>
+<ol>
+<li>拉取 <code>mysql:8.0</code> → 使用中</li>
+<li><code>docker compose pull</code> 拉取 <code>mysql:8.0</code> 新版本 → 新镜像层下载</li>
+<li>旧 <code>mysql:8.0</code> 层仍在磁盘上，但没有任何容器引用 → 成为 dangling image</li>
+<li><code>docker image prune</code> 杀之</li>
+</ol>
+<p>如果不定期 prune，这个过程累积的空间非常可观。自动清理脚本：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># weekly-cleanup.sh — 每周日 03:00 运行</span></span><br><span class="line"><span class="comment">#!/bin/bash</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;=== 清理未使用容器 ===&quot;</span></span><br><span class="line">docker container prune -f --filter <span class="string">&quot;until=72h&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;=== 清理 dangling 镜像 ===&quot;</span></span><br><span class="line">docker image prune -f</span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;=== 清理未使用卷 ===&quot;</span></span><br><span class="line">docker volume prune -f</span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;=== 清理 build cache ===&quot;</span></span><br><span class="line">docker builder prune -f</span><br><span class="line"></span><br><span class="line"><span class="built_in">echo</span> <span class="string">&quot;=== 清理后状态 ===&quot;</span></span><br><span class="line">docker system <span class="built_in">df</span></span><br></pre></td></tr></table></figure>
+
+<p>在 N100 上我把它放在 cron 里每周日凌晨执行，避免在工作负载高峰期跑：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">0 3 * * 0 /home/michael/scripts/docker-weekly-cleanup.sh</span><br></pre></td></tr></table></figure>
+
+<h2 id="4-卷的生命周期"><a href="#4-卷的生命周期" class="headerlink" title="4. 卷的生命周期"></a>4. 卷的生命周期</h2><h3 id="4-1-持久数据——卷就是一切"><a href="#4-1-持久数据——卷就是一切" class="headerlink" title="4.1 持久数据——卷就是一切"></a>4.1 持久数据——卷就是一切</h3><p>Docker 卷（volume）是容器数据的唯一持久层。HanyanOS 上 21 个卷只有 4 个活跃：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">$ docker volume ls</span><br><span class="line">DRIVER    VOLUME NAME</span><br><span class="line">local     hanyan_mysql_data          ← 活跃</span><br><span class="line">local     immich_pgdata              ← 非活跃但是数据</span><br><span class="line">local     mail-server_certificates   ← 活跃</span><br><span class="line">local     serena_wordpress_data      ← 活跃</span><br><span class="line">...</span><br></pre></td></tr></table></figure>
+
+<p>活跃的 4 个卷承载了几乎全部重要数据：</p>
+<table>
+<thead>
+<tr>
+<th>卷</th>
+<th>挂载路径</th>
+<th>数据内容</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>hanyan_mysql_data</code></td>
+<td>&#x2F;var&#x2F;lib&#x2F;mysql</td>
+<td>HanyanOS 主数据库</td>
+</tr>
+<tr>
+<td><code>serena_wordpress_data</code></td>
+<td>&#x2F;var&#x2F;www&#x2F;html</td>
+<td>博客内容</td>
+</tr>
+<tr>
+<td><code>mail-server_certificates</code></td>
+<td>&#x2F;opt&#x2F;stalwart-mail&#x2F;certs</td>
+<td>邮件服务器证书</td>
+</tr>
+<tr>
+<td><code>qdrant_storage</code></td>
+<td>&#x2F;qdrant&#x2F;storage</td>
+<td>向量数据库</td>
+</tr>
+</tbody></table>
+<p><strong>重要原则：数据卷永远不要手动操作。</strong> 不像镜像和容器可以随便删，卷里的数据丢了就是真的丢了。</p>
+<h3 id="4-2-孤立卷——占着茅坑不拉屎"><a href="#4-2-孤立卷——占着茅坑不拉屎" class="headerlink" title="4.2 孤立卷——占着茅坑不拉屎"></a>4.2 孤立卷——占着茅坑不拉屎</h3><p>21 个卷中 17 个没有被任何容器引用。其中 Immich 的 3 个卷（pgdata、ml-model、upload），以及各种测试容器的临时卷，占用了约 980M 的可回收空间。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 列出没有被任何容器使用的卷</span></span><br><span class="line">docker volume <span class="built_in">ls</span> -qf dangling=<span class="literal">true</span></span><br></pre></td></tr></table></figure>
+
+<p>这些孤立卷中的大多数可以安全删除，但要注意：<strong>如果卷名字看起来有价值（immich_pgdata、backup_data），先确认再删。</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 安全清理策略：保留最近 30 天有数据的卷</span></span><br><span class="line">docker volume prune --filter <span class="string">&quot;label!=keep&quot;</span> -f</span><br><span class="line"><span class="comment"># 更保守：只删匿名卷（没有明确名字的卷）</span></span><br><span class="line">docker volume <span class="built_in">ls</span> -qf dangling=<span class="literal">true</span> | <span class="keyword">while</span> <span class="built_in">read</span> vol; <span class="keyword">do</span></span><br><span class="line">  <span class="keyword">if</span> [[ <span class="variable">$vol</span> == *<span class="string">&quot;_&quot;</span>* ]]; <span class="keyword">then</span></span><br><span class="line">    <span class="built_in">echo</span> <span class="string">&quot;⚠️ 跳过命名卷: <span class="variable">$vol</span>&quot;</span></span><br><span class="line">  <span class="keyword">else</span></span><br><span class="line">    <span class="built_in">echo</span> <span class="string">&quot;🧹 删除匿名卷: <span class="variable">$vol</span>&quot;</span></span><br><span class="line">    docker volume <span class="built_in">rm</span> <span class="string">&quot;<span class="variable">$vol</span>&quot;</span></span><br><span class="line">  <span class="keyword">fi</span></span><br><span class="line"><span class="keyword">done</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="5-容器级生命周期钩子"><a href="#5-容器级生命周期钩子" class="headerlink" title="5. 容器级生命周期钩子"></a>5. 容器级生命周期钩子</h2><p>Docker 本身不支持”容器启动后执行脚本”这种生命周期钩子，但可以通过组合手段实现：</p>
+<h3 id="5-1-HEALTHCHECK-作为”运行中”确认"><a href="#5-1-HEALTHCHECK-作为”运行中”确认" class="headerlink" title="5.1 HEALTHCHECK 作为”运行中”确认"></a>5.1 HEALTHCHECK 作为”运行中”确认</h3><p>最好的例子是 <code>crawl4ai</code> 容器：</p>
+<figure class="highlight dockerfile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">HEALTHCHECK</span><span class="language-bash"> --interval=15s --<span class="built_in">timeout</span>=5s --retries=3 \</span></span><br><span class="line"><span class="language-bash">  CMD curl -f http://localhost:8000/health || <span class="built_in">exit</span> 1</span></span><br></pre></td></tr></table></figure>
+
+<p>Docker 引擎会每 15 秒检查一次，连续 3 次失败后容器状态变为 <code>unhealthy</code>。配合 <code>docker events</code> 可以做到：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># 实时监听容器健康状态变更</span></span><br><span class="line">docker events --filter <span class="string">&#x27;event=health_status&#x27;</span> --format <span class="string">&#x27;&#123;&#123;.Actor.Attributes.name&#125;&#125; -&gt; &#123;&#123;.Status&#125;&#125;&#x27;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-2-docker-events-—-容器八卦监听器"><a href="#5-2-docker-events-—-容器八卦监听器" class="headerlink" title="5.2 docker events — 容器八卦监听器"></a>5.2 docker events — 容器八卦监听器</h3><p><code>docker events</code> 是一个被低估的命令。它流式返回 Docker daemon 的实时事件：</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">2026-06-07 16:30:01.523 container start  stalwart-mail  (image=stalwartlabs/stalwart:latest)</span><br><span class="line">2026-06-07 16:33:50.104 container die   hanyan-backup   (exitCode=137)</span><br><span class="line">2026-06-07 16:35:12.890 container die   immich-server   (exitCode=143)</span><br></pre></td></tr></table></figure>
+
+<p>我们可以把它变成一个长期监听服务，记录每个容器的生命周期事件到日志：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"><span class="comment"># docker-lifecycle-monitor.sh — 持续监听容器事件</span></span><br><span class="line">docker events --filter <span class="string">&#x27;type=container&#x27;</span> --format <span class="string">&#x27;&#123;&#123;.Time&#125;&#125; &#123;&#123;.Action&#125;&#125; &#123;&#123;.Actor.Attributes.name&#125;&#125; (exit=&#123;&#123;.Actor.Attributes.exitCode&#125;&#125;)&#x27;</span> \</span><br><span class="line">  &gt;&gt; /var/log/docker-lifecycle.log</span><br></pre></td></tr></table></figure>
+
+<p>然后用 systemd 让它开机自启：</p>
+<figure class="highlight ini"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="section">[Unit]</span></span><br><span class="line"><span class="attr">Description</span>=Docker Lifecycle Event Logger</span><br><span class="line"><span class="attr">After</span>=docker.service</span><br><span class="line"><span class="attr">Requires</span>=docker.service</span><br><span class="line"></span><br><span class="line"><span class="section">[Service]</span></span><br><span class="line"><span class="attr">ExecStart</span>=/home/michael/scripts/docker-lifecycle-monitor.sh</span><br><span class="line"><span class="attr">Restart</span>=always</span><br><span class="line"><span class="attr">User</span>=michael</span><br><span class="line"></span><br><span class="line"><span class="section">[Install]</span></span><br><span class="line"><span class="attr">WantedBy</span>=multi-user.target</span><br></pre></td></tr></table></figure>
+
+<p>这个日志在排查”容器什么时候挂了”时非常好用。比如 <code>hanyan-backup</code> 在 13 天前退出（137），对照当时的系统日志可以看到 OOM Killer 的记录和系统内存压力——完全是印证式的排错体验。</p>
+<h2 id="6-docker-compose-vs-手动管理"><a href="#6-docker-compose-vs-手动管理" class="headerlink" title="6. docker-compose vs 手动管理"></a>6. docker-compose vs 手动管理</h2><p>经过几个月迭代，HanyanOS 确立了以下规范：</p>
+<table>
+<thead>
+<tr>
+<th>方面</th>
+<th>docker-compose</th>
+<th>手动 docker run</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>配置管理</td>
+<td>YAML 文件，git 版本化管理</td>
+<td>散落在 bash_history 中</td>
+</tr>
+<tr>
+<td>重启策略</td>
+<td>restart: unless-stopped 开箱即用</td>
+<td>–restart 参数容易忘记</td>
+</tr>
+<tr>
+<td>网络管理</td>
+<td>自动创建项目网络</td>
+<td>手动 –network 配置</td>
+</tr>
+<tr>
+<td>资源限制</td>
+<td>deploy.resources.limits 结构化</td>
+<td>–memory –cpus 参数形式</td>
+</tr>
+<tr>
+<td>更新回滚</td>
+<td>docker compose pull + up -d</td>
+<td>需要手动 docker stop&#x2F;rm&#x2F;run</td>
+</tr>
+<tr>
+<td>团队协作</td>
+<td>新人看 YAML 就懂</td>
+<td>要看 bash_history + 靠口口相传</td>
+</tr>
+</tbody></table>
+<p><strong>结论：Docker Compose 是 N100 这种单机环境的最佳平衡点。</strong> Swarm 太重，纯 docker run 太散。compose 只有一个 YAML 文件和一行 <code>docker compose up -d</code>，适合。</p>
+<h2 id="7-N100-的临界值——什么时候-Docker-会吃掉你的系统"><a href="#7-N100-的临界值——什么时候-Docker-会吃掉你的系统" class="headerlink" title="7. N100 的临界值——什么时候 Docker 会吃掉你的系统"></a>7. N100 的临界值——什么时候 Docker 会吃掉你的系统</h2><p>让我总结一下实际环境的数据：</p>
+<p><strong>当前 Docker 磁盘占用（系统盘 120GB）：</strong></p>
+<table>
+<thead>
+<tr>
+<th>项目</th>
+<th>大小</th>
+<th>占比</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>镜像</td>
+<td>21.42 GB</td>
+<td>17.85%</td>
+</tr>
+<tr>
+<td>容器层</td>
+<td>164.4 MB</td>
+<td>0.14%</td>
+</tr>
+<tr>
+<td>卷</td>
+<td>1.18 GB</td>
+<td>0.98%</td>
+</tr>
+<tr>
+<td>Docker 合计</td>
+<td>22.76 GB</td>
+<td>18.97%</td>
+</tr>
+<tr>
+<td><strong>可回收空间</strong></td>
+<td><strong>~20.26 GB</strong></td>
+<td><strong>16.88%</strong></td>
+</tr>
+</tbody></table>
+<p><strong>关键警告阈值（N100 120GB NVMe）：</strong></p>
+<ul>
+<li>镜像+容器 &gt; 35GB → 需要大规模清理（通常对应 30+ 个 dangling 镜像）</li>
+<li>卷 &gt; 5GB → 检查是否有被遗忘的数据库卷</li>
+<li>Docker 总占用 &gt; 40GB → 系统已经危险</li>
+<li><strong>120GB 磁盘上的运维原则：当系统稳定性可用空间小于 15GB 时，先释放磁盘再排查任何奇怪的错误（数据库写入失败、日志无法轮转、apt update 报错）</strong></li>
+</ul>
+<hr>
+<p><strong>运维手记系列：</strong></p>
+<ul>
+<li>#1: 轻量级系统监控实战 — N100 上没有 Prometheus 的日子 ✅</li>
+<li>#2: Docker 容器生命周期管理 — 从镜像到坟场 ✅</li>
+<li>#3: 备份恢复管线——restic + cron 冷热分离（待续）</li>
+<li>#4: 日志管理——旋转、留存、审计（待续）</li>
+<li>#5: 性能调优——11GB 上的内存生存艺术（待续）</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          
+
+<div class="post-copyright">
+<ul>
+  <li class="post-copyright-author">
+      <strong>本文作者： </strong>Michael Chen
+  </li>
+  <li class="post-copyright-link">
+      <strong>本文链接：</strong>
+      <a href="https://www.chenyun.org/2026/06/07/2026-06-07-hanyan-ops-2/" title="HanyanOS 运维手记">https://www.chenyun.org/2026/06/07/2026-06-07-hanyan-ops-2/</a>
+  </li>
+  <li class="post-copyright-license">
+      <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+          <div class="post-tags">
+              <a href="/tags/DevOps/" rel="tag"># DevOps</a>
+              <a href="/tags/Docker/" rel="tag"># Docker</a>
+              <a href="/tags/HanyanOS/" rel="tag"># HanyanOS</a>
+              <a href="/tags/System-Administration/" rel="tag"># System Administration</a>
+              <a href="/tags/Container/" rel="tag"># Container</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2026/06/05/2026-06-05-paper-human-ai-intimacy/" rel="prev" title="论文发表 · 从工具到情感主体：生成式人工智能代理与人类亲密关系重构研究">
+                  <i class="fa fa-angle-left"></i> 论文发表 · 从工具到情感主体：生成式人工智能代理与人类亲密关系重构研究
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 2022 – 
+    <span itemprop="copyrightYear">2026</span>
+    <span class="with-love">
+      <i class="fa fa-heart"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder">Michael Chen</span>
+  </div>
+  <div class="powered-by">由 <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="返回顶部">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+</body>
+</html>
