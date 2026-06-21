@@ -5649,4 +5649,146 @@
         <tag>GPG</tag>
       </tags>
   </entry>
+  <entry>
+    <title>HanyanOS 运维手记</title>
+    <url>/2026/06/21/2026-06-21-hanyan-ops-4/</url>
+    <content><![CDATA[<h2 id="1-引言"><a href="#1-引言" class="headerlink" title="1. 引言"></a>1. 引言</h2><blockquote>
+<p><strong>“日志不会骗人，但日志太多的时候，你根本不想看。”</strong></p>
+</blockquote>
+<p>备份管线做好后（#3），下一个自然该管的是——日志。数据有备份，但诊断数据本身呢？</p>
+<p>一台 24&#x2F;7 运行的 N100，跑着 Docker、pm2、systemd 全家桶，日志文件会悄悄膨胀到你想不到的程度。今天这篇就是我在 aicore 上做日志治理的真实记录。</p>
+<p>先看现状：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">$ journalctl --disk-usage</span><br><span class="line">Archived and active journals take up 3.9G in the file system.</span><br><span class="line"></span><br><span class="line">$ journalctl -p err --since &quot;3 days ago&quot; | wc -l</span><br><span class="line">~4000 行</span><br></pre></td></tr></table></figure>
+
+<p><strong>3.9GB。</strong> 对于一台 N100 来说，这不是一个小数字。而且——默认的 <code>journald.conf</code> 什么都没配。</p>
+<hr>
+<h2 id="2-日志全景图"><a href="#2-日志全景图" class="headerlink" title="2. 日志全景图"></a>2. 日志全景图</h2><p>先画一下这台机器上的日志源：</p>
+<table>
+<thead>
+<tr>
+<th>日志源</th>
+<th>位置</th>
+<th>规模</th>
+<th align="center">关键程度</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>systemd journal</td>
+<td><code>journalctl</code></td>
+<td>3.9GB</td>
+<td align="center">⭐⭐⭐</td>
+</tr>
+<tr>
+<td>pm2 logs</td>
+<td><code>~/.pm2/logs/</code></td>
+<td>~few MB</td>
+<td align="center">⭐⭐</td>
+</tr>
+<tr>
+<td>Docker 容器日志</td>
+<td><code>journald</code> 驱动</td>
+<td>包含在 3.9G 内</td>
+<td align="center">⭐⭐⭐</td>
+</tr>
+<tr>
+<td>Nginx (如有)</td>
+<td><code>/var/log/nginx/</code></td>
+<td>N&#x2F;A</td>
+<td align="center">⭐</td>
+</tr>
+<tr>
+<td>kernel&#x2F;dmesg</td>
+<td><code>journald</code></td>
+<td>包含在上</td>
+<td align="center">⭐⭐⭐</td>
+</tr>
+</tbody></table>
+<p>最大的问题是：<strong>所有日志都涌进 journald，而它没有上限配置。</strong></p>
+<hr>
+<h2 id="3-噪音分析-—-谁在刷屏"><a href="#3-噪音分析-—-谁在刷屏" class="headerlink" title="3. 噪音分析 — 谁在刷屏"></a>3. 噪音分析 — 谁在刷屏</h2><h3 id="3-1-蓝牙重连狂魔"><a href="#3-1-蓝牙重连狂魔" class="headerlink" title="3.1 蓝牙重连狂魔"></a>3.1 蓝牙重连狂魔</h3><p>占 err 级别日志 <strong>80% 以上</strong>：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Jun 21 17:46:24 aicore bluetoothd[780]: profiles/audio/avdtp.c:avdtp_connect_cb()</span><br><span class="line">  connect to 0C:FC:30:00:06:2A: Host is down (112)</span><br></pre></td></tr></table></figure>
+
+<p>这是 ZEALOT-S32 蓝牙音箱的连接尝试。音箱没有开机，但 systemd 在不断地尝试重连——每 30 秒一次，一天 2880 条。</p>
+<h3 id="3-2-PCIe-AER-错误（零星但存在）"><a href="#3-2-PCIe-AER-错误（零星但存在）" class="headerlink" title="3.2 PCIe AER 错误（零星但存在）"></a>3.2 PCIe AER 错误（零星但存在）</h3><figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">Jun 21 17:37:55 aicore kernel: pcieport 0000:00:1c.0: AER:</span><br><span class="line">  Error of this Agent is reported first</span><br></pre></td></tr></table></figure>
+
+<p>N100 平台上的常见现象，频率不高（一周几次）。单个事件信息量不大，但长期积累会暗示某个 PCIe 链路的不稳定。</p>
+<h3 id="3-3-pm2-日志（正常流量）"><a href="#3-3-pm2-日志（正常流量）" class="headerlink" title="3.3 pm2 日志（正常流量）"></a>3.3 pm2 日志（正常流量）</h3><p>ai-portal 的 pm2 日志里全是正常的 HTTP 200&#x2F;304——说明服务健康，但日志本身对故障诊断帮助不大。</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">0|ai-porta | GET /assets/index-CNdUHBv6.js 200 0.754 ms - 2425817</span><br><span class="line">0|ai-porta | GET /api/status/public 200 56.428 ms - 144</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="4-journald-治理实战"><a href="#4-journald-治理实战" class="headerlink" title="4. journald 治理实战"></a>4. journald 治理实战</h2><h3 id="4-1-加个容量上限"><a href="#4-1-加个容量上限" class="headerlink" title="4.1 加个容量上限"></a>4.1 加个容量上限</h3><p><code>journald.conf</code> 默认策略是 <strong>不限制</strong>。这意味着 journal 会一直长下去，直到你把磁盘占满。配置一个合理上限：</p>
+<figure class="highlight ini"><table><tr><td class="code"><pre><span class="line"><span class="comment"># /etc/systemd/journald.conf</span></span><br><span class="line"><span class="section">[Journal]</span></span><br><span class="line"><span class="attr">SystemMaxUse</span>=<span class="number">500</span>M</span><br><span class="line"><span class="attr">SystemMaxFileSize</span>=<span class="number">100</span>M</span><br><span class="line"><span class="attr">MaxRetentionSec</span>=<span class="number">30</span>day</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><code>SystemMaxUse=500M</code> — journal 总大小上限 500MB</li>
+<li><code>SystemMaxFileSize=100M</code> — 单个文件上限</li>
+<li><code>MaxRetentionSec=30day</code> — 只保留 30 天</li>
+</ul>
+<p>改动后重启 journald：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="built_in">sudo</span> systemctl restart systemd-journald</span><br></pre></td></tr></table></figure>
+
+<p>等等——重启 journald 不会丢日志吗？</p>
+<p>答案是：<strong>重启时 active journal 会被 rotate，已持久化的日志不会丢。</strong> 你可以安全执行。</p>
+<h3 id="4-2-立刻缩减"><a href="#4-2-立刻缩减" class="headerlink" title="4.2 立刻缩减"></a>4.2 立刻缩减</h3><p>配置改了，但现有的 3.9GB 还在。手动清理：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 保留最近 7 天</span></span><br><span class="line"><span class="built_in">sudo</span> journalctl --vacuum-time=7d</span><br><span class="line"></span><br><span class="line"><span class="comment"># 或者保留最近 500MB</span></span><br><span class="line"><span class="built_in">sudo</span> journalctl --vacuum-size=500M</span><br></pre></td></tr></table></figure>
+
+<p>这个命令会删除旧日志文件，只保留满足条件的数据。注意：执行后 journal 会释放磁盘空间，但 journal 文件删除是文件级别操作，不会碎片化。</p>
+<h3 id="4-3-验证生效"><a href="#4-3-验证生效" class="headerlink" title="4.3 验证生效"></a>4.3 验证生效</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ journalctl --disk-usage</span><br><span class="line">Archived and active journals take up 463.6M <span class="keyword">in</span> the file system.</span><br></pre></td></tr></table></figure>
+
+<p>从 3.9GB → ~460MB，节省了 3.4GB。对于 N100 的 1TB 盘来说或许不算什么，但对于 <code>/var/log/journal</code> 可能位于系统分区的小盘机器来说，这个差异很关键。</p>
+<hr>
+<h2 id="5-日志分析技巧"><a href="#5-日志分析技巧" class="headerlink" title="5. 日志分析技巧"></a>5. 日志分析技巧</h2><h3 id="5-1-找出高频错误源"><a href="#5-1-找出高频错误源" class="headerlink" title="5.1 找出高频错误源"></a>5.1 找出高频错误源</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 按服务/进程统计最近一周的 warn+ 日志</span></span><br><span class="line">journalctl -p warn --since <span class="string">&quot;7 days ago&quot;</span> --no-pager \</span><br><span class="line">  | awk <span class="string">&#x27;&#123;print $5&#125;&#x27;</span> | <span class="built_in">sort</span> | <span class="built_in">uniq</span> -c | <span class="built_in">sort</span> -rn | <span class="built_in">head</span> -20</span><br></pre></td></tr></table></figure>
+
+<p>对 aicore 执行结果一目了然——蓝牙驱动独占了 TOP 1。</p>
+<h3 id="5-2-时间窗口分析"><a href="#5-2-时间窗口分析" class="headerlink" title="5.2 时间窗口分析"></a>5.2 时间窗口分析</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 某个时间段内的 Kernel 错误</span></span><br><span class="line">journalctl -k -p err --since <span class="string">&quot;2026-06-18 00:00&quot;</span> --<span class="keyword">until</span> <span class="string">&quot;2026-06-19 00:00&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Docker daemon 自己的日志</span></span><br><span class="line">journalctl -u docker.service -p err --since <span class="string">&quot;7 days ago&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># pm2 的错误输出（不是 access log）</span></span><br><span class="line">journalctl -t pm2 -p err --since <span class="string">&quot;today&quot;</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="5-3-专注模式：只看真正需要关注的"><a href="#5-3-专注模式：只看真正需要关注的" class="headerlink" title="5.3 专注模式：只看真正需要关注的"></a>5.3 专注模式：只看真正需要关注的</h3><p>如果你在排查某个容器的问题：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="comment"># 容器 stderr/stdout（如果 Docker 日志驱动是 journald）</span></span><br><span class="line">journalctl CONTAINER_NAME=ai-portal -p err --since <span class="string">&quot;1 hour ago&quot;</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># 或者直接用 Docker 的接口</span></span><br><span class="line">docker logs --since 1h ai-portal 2&gt;&amp;1 | grep -i error</span><br></pre></td></tr></table></figure>
+
+<hr>
+<h2 id="6-pm2-日志轮转"><a href="#6-pm2-日志轮转" class="headerlink" title="6. pm2 日志轮转"></a>6. pm2 日志轮转</h2><p>pm2 自己也有日志文件，默认在 <code>~/.pm2/logs/</code>。pm2 内置了日志轮转模块：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">pm2 install pm2-logrotate</span><br><span class="line">pm2 <span class="built_in">set</span> pm2-logrotate:max_size 100M</span><br><span class="line">pm2 <span class="built_in">set</span> pm2-logrotate:retain 3</span><br><span class="line">pm2 <span class="built_in">set</span> pm2-logrotate:compress <span class="literal">true</span></span><br></pre></td></tr></table></figure>
+
+<p>这能防止 pm2 的应用日志无限增长。不过我实际检查了一下，ai-portal 的 pm2 日志目前只有几个 MB——得益于它只是提供 AI 对话界面，日志量很小。</p>
+<hr>
+<h2 id="7-从日志到告警"><a href="#7-从日志到告警" class="headerlink" title="7. 从日志到告警"></a>7. 从日志到告警</h2><p>日志治理不只是”别让它撑爆磁盘”。当关键事件发生时，日志应该变成告警。</p>
+<p>目前的方案比较朴素——cron job 跑脚本检查 journal 中的关键模式：</p>
+<figure class="highlight bash"><table><tr><td class="code"><pre><span class="line"><span class="meta">#!/bin/bash</span></span><br><span class="line"><span class="comment"># /usr/local/bin/check-journal-alerts.sh</span></span><br><span class="line"><span class="comment"># 由 cron 每小时执行</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> journalctl -p crit --since <span class="string">&quot;1 hour ago&quot;</span> --quiet | grep -q .; <span class="keyword">then</span></span><br><span class="line">    <span class="comment"># 发现 critical 级别日志，触发告警</span></span><br><span class="line">    <span class="built_in">echo</span> <span class="string">&quot;🚨 CRITICAL log detected in last hour&quot;</span> | mail -s <span class="string">&quot;N100 Alert&quot;</span> michael@chenyun.org</span><br><span class="line"><span class="keyword">fi</span></span><br></pre></td></tr></table></figure>
+
+<p>如果要更专业：journald 支持 <code>ForwardToSyslog=yes</code> 把日志转发到 rsyslog，然后在 rsyslog 做规则匹配和远程转发。对于家庭实验室来说，这个组合绰绰有余。</p>
+<hr>
+<h2 id="8-真实事件复盘：蓝牙刷屏与-PCIe-错误"><a href="#8-真实事件复盘：蓝牙刷屏与-PCIe-错误" class="headerlink" title="8. 真实事件复盘：蓝牙刷屏与 PCIe 错误"></a>8. 真实事件复盘：蓝牙刷屏与 PCIe 错误</h2><p>写这篇文章的契机，是这个 cron job 触发了检查时意外发现的”隐藏噪音”：</p>
+<p><strong>Bluetooth 误连（严重度：低）</strong></p>
+<p>ZEALOT-S32 音箱关机后，systemd 蓝牙服务每隔 30 秒尝试重新连接。这不是系统问题——但 2880 条&#x2F;天的无效日志在浪费空间和注意力。</p>
+<p>修复方案很简单：给蓝牙配置一个合理的连接超时，或者在不需要时禁用蓝牙模块。</p>
+<p><strong>PCIe AER（严重度：中）</strong></p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">pcieport 0000:00:1c.0: AER: Error of this Agent is reported first</span><br></pre></td></tr></table></figure>
+
+<p>频率很低（本周 3 次），但值得关注。AER（Advanced Error Reporting）通常是信号完整性问题——可能是 N100 SoC 内 PCIe 链路的状态转换问题，也可能是 mini PCIe 插槽的接触问题。如果频率增加（每天数十次），需要检查 dmesg 并考虑升级 BIOS&#x2F;固件。</p>
+<hr>
+<h2 id="9-最终配置清单"><a href="#9-最终配置清单" class="headerlink" title="9. 最终配置清单"></a>9. 最终配置清单</h2><p>治理完成后，我的日志策略长这样：</p>
+<figure class="highlight plaintext"><table><tr><td class="code"><pre><span class="line">✅ journald 上限 500MB，保留 30 天</span><br><span class="line">✅ journalctl 按需清理至合理体积</span><br><span class="line">✅ pm2-logrotate 安装并配置</span><br><span class="line">✅ 关键日志告警脚本部署</span><br><span class="line">✅ 已识别并记录噪音源（蓝牙/PCIe）</span><br></pre></td></tr></table></figure>
+
+<p>系统盘空间从 3.9GB 日志负担降至约 500MB。释放的 3.4GB 可以做更多有用的事——比如多存几张 Docker 镜像。</p>
+<hr>
+<h2 id="10-下期预告"><a href="#10-下期预告" class="headerlink" title="10. 下期预告"></a>10. 下期预告</h2><p>日志能告诉我们”发生了什么”，但性能数据告诉我们”跑得怎么样”。下一篇：</p>
+<blockquote>
+<p><strong>运维手记 #5: 性能调优 — N100 的性能边界在哪里？</strong></p>
+</blockquote>
+<p>涉及 CPU 调频策略、内存压缩、Swap 优化、I&#x2F;O 调度和 Docker 资源限制。</p>
+<hr>
+<p><em>本文所有数据来自 aicore（N100 &#x2F; 32GB &#x2F; 1TB NVMe &#x2F; Ubuntu 24.04 &#x2F; systemd 256）的真实运行环境。</em></p>
+]]></content>
+      <categories>
+        <category>tech</category>
+      </categories>
+      <tags>
+        <tag>DevOps</tag>
+        <tag>HanyanOS</tag>
+        <tag>System Administration</tag>
+        <tag>journalctl</tag>
+        <tag>Log Management</tag>
+        <tag>systemd</tag>
+      </tags>
+  </entry>
 </search>
